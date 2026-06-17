@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Зеркало</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: #0e0e0f;
+    --bg2: #1a1a1b;
+    --bg3: #242425;
+    --text: #f0ede8;
+    --text2: #9a9793;
+    --text3: #5a5855;
+    --accent: #c8f0d8;
+    --accent-dim: #1e3329;
+    --border: rgba(255,255,255,0.08);
+    --teal: #4ecb8d;
+    --purple: #a78bfa;
+    --coral: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Inter', sans-serif; }
+  .screen { display: none; flex-direction: column; min-height: 100vh; padding: 0 20px 48px; }
+  .screen.active { display: flex; }
+
+  /* WELCOME */
+  #screen-welcome { align-items: center; justify-content: center; text-align: center; }
+  .mirror-anim { font-size: 72px; margin-bottom: 32px; animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  .welcome-title { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 12px; }
+  .welcome-sub { font-size: 16px; color: var(--text2); line-height: 1.6; max-width: 280px; margin: 0 auto 40px; }
+  .btn-primary { background: var(--accent); color: #081a0e; font-size: 16px; font-weight: 700; border: none; border-radius: 14px; padding: 16px 32px; width: 100%; max-width: 320px; cursor: pointer; }
+  .btn-primary:active { opacity: 0.85; }
+  .welcome-note { font-size: 13px; color: var(--text3); margin-top: 14px; }
+
+  /* QUESTION */
+  #screen-question { padding-top: 20px; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 24px; }
+  .day-chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 13px; color: var(--text2); }
+  .streak-chip { font-size: 13px; color: var(--text2); }
+  .dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 28px; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--bg3); transition: all 0.3s; }
+  .dot.done { background: var(--teal); }
+  .dot.current { background: var(--accent); transform: scale(1.5); }
+  .q-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+  .q-eyebrow { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+  .q-text { font-size: 20px; font-weight: 500; line-height: 1.5; }
+  textarea { width: 100%; min-height: 140px; background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; font-size: 16px; font-family: inherit; color: var(--text); resize: none; outline: none; line-height: 1.6; }
+  textarea:focus { border-color: rgba(200,240,216,0.25); }
+  textarea::placeholder { color: var(--text3); }
+  .char-count { text-align: right; font-size: 12px; color: var(--text3); margin: 8px 0 16px; }
+  .btn-send { background: var(--accent); color: #081a0e; font-size: 16px; font-weight: 700; border: none; border-radius: 14px; padding: 16px; width: 100%; cursor: pointer; }
+  .btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* INSIGHT */
+  #screen-insight { padding-top: 20px; }
+  .insight-header { text-align: center; padding: 16px 0 28px; }
+  .insight-icon { font-size: 44px; margin-bottom: 10px; }
+  .insight-title { font-size: 22px; font-weight: 600; }
+  .q-echo { background: var(--bg3); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
+  .q-echo-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .q-echo-text { font-size: 14px; color: var(--text2); line-height: 1.5; }
+  .insight-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 16px; }
+  .insight-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; }
+  .insight-body { font-size: 17px; line-height: 1.7; min-height: 60px; }
+  .traits-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .trait-tag { background: var(--accent-dim); color: var(--accent); border-radius: 20px; padding: 6px 14px; font-size: 13px; }
+  .btn-next { background: var(--bg3); color: var(--text); font-size: 15px; font-weight: 500; border: 1px solid var(--border); border-radius: 14px; padding: 14px; width: 100%; cursor: pointer; margin-bottom: 10px; }
+  .btn-portrait { background: transparent; color: var(--teal); font-size: 14px; border: 1px solid rgba(78,203,141,0.25); border-radius: 14px; padding: 14px; width: 100%; cursor: pointer; }
+
+  /* PORTRAIT */
+  #screen-portrait { padding-top: 20px; }
+  .portrait-header { text-align: center; padding: 16px 0 24px; }
+  .portrait-avatar { width: 60px; height: 60px; border-radius: 50%; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 12px; }
+  .portrait-name { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .portrait-sub { font-size: 14px; color: var(--text2); }
+  .pstats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }
+  .pstat { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 10px; text-align: center; }
+  .pstat-val { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .pstat-lbl { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .section-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+  .trait-bars { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 24px; }
+  .bar-row { margin-bottom: 14px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-meta { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .bar-name { font-size: 13px; color: var(--text2); }
+  .bar-pct { font-size: 12px; color: var(--text3); }
+  .bar-bg { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 1.2s cubic-bezier(.16,1,.3,1); }
+  .all-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .history-item { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 10px; }
+  .hist-q { font-size: 12px; color: var(--text3); margin-bottom: 6px; }
+  .hist-a { font-size: 14px; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
+  .hist-insight { font-size: 13px; color: var(--teal); line-height: 1.5; }
+  .btn-back { background: var(--bg3); color: var(--text2); font-size: 14px; border: 1px solid var(--border); border-radius: 14px; padding: 14px; width: 100%; cursor: pointer; margin-top: 8px; }
+
+  /* PAYWALL */
+  #screen-paywall { align-items: center; justify-content: center; text-align: center; }
+  .paywall-icon { font-size: 56px; margin-bottom: 20px; }
+  .paywall-title { font-size: 26px; font-weight: 700; margin-bottom: 10px; }
+  .paywall-sub { font-size: 15px; color: var(--text2); line-height: 1.6; max-width: 280px; margin: 0 auto 28px; }
+  .paywall-perks { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 24px; text-align: left; width: 100%; max-width: 340px; }
+  .perk { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; font-size: 15px; line-height: 1.4; }
+  .perk:last-child { margin-bottom: 0; }
+  .perk-icon { font-size: 18px; flex-shrink: 0; }
+  .price-badge { font-size: 30px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .price-note { font-size: 13px; color: var(--text3); margin-bottom: 20px; }
+
+  /* LOADING */
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--bg3); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mirror-anim, .spinner { animation: none; }
+    .bar-fill { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- WELCOME -->
+<div class="screen active" id="screen-welcome">
+  <div class="mirror-anim">🪞</div>
+  <div class="welcome-title">Зеркало</div>
+  <div class="welcome-sub">Один вопрос в день. Честный ответ. Портрет себя, который растёт годами.</div>
+  <button class="btn-primary" onclick="showQuestion()">Начать — это бесплатно</button>
+  <div class="welcome-note">7 дней бесплатно · Без регистрации</div>
+</div>
+
+<!-- QUESTION -->
+<div class="screen" id="screen-question">
+  <div class="top-bar">
+    <div class="day-chip" id="day-chip">День 1</div>
+    <div class="streak-chip" id="streak-chip">🔥 1 день</div>
+  </div>
+  <div class="dots" id="dots-row"></div>
+  <div class="q-card">
+    <div class="q-eyebrow">Вопрос дня</div>
+    <div class="q-text" id="q-text"></div>
+  </div>
+  <textarea id="answer-input" placeholder="Напиши всё, что приходит в голову. Здесь нет правильных ответов..." oninput="onInput()"></textarea>
+  <div class="char-count"><span id="char-count">0</span> символов</div>
+  <button class="btn-send" id="btn-send" onclick="submitAnswer()" disabled>Получить инсайт ↗</button>
+</div>
+
+<!-- INSIGHT -->
+<div class="screen" id="screen-insight">
+  <div class="insight-header">
+    <div class="insight-icon">✦</div>
+    <div class="insight-title">Твой инсайт</div>
+  </div>
+  <div class="q-echo">
+    <div class="q-echo-label">Твой ответ</div>
+    <div class="q-echo-text" id="echo-answer"></div>
+  </div>
+  <div class="insight-card">
+    <div class="insight-label">Что я вижу</div>
+    <div class="insight-body" id="insight-body"></div>
+    <div class="traits-wrap" id="traits-wrap"></div>
+  </div>
+  <button class="btn-next" onclick="nextQuestion()">Следующий вопрос →</button>
+  <button class="btn-portrait" onclick="showPortrait()">Мой портрет 🪞</button>
+</div>
+
+<!-- PORTRAIT -->
+<div class="screen" id="screen-portrait">
+  <div class="portrait-header">
+    <div class="portrait-avatar">🪞</div>
+    <div class="portrait-name">Твой портрет</div>
+    <div class="portrait-sub" id="portrait-sub"></div>
+  </div>
+  <div class="pstats">
+    <div class="pstat"><div class="pstat-val" id="ps-answers">0</div><div class="pstat-lbl">ответов</div></div>
+    <div class="pstat"><div class="pstat-val" id="ps-traits">0</div><div class="pstat-lbl">черт</div></div>
+    <div class="pstat"><div class="pstat-val" id="ps-days">1</div><div class="pstat-lbl">дней</div></div>
+  </div>
+  <div class="section-label">Карта личности</div>
+  <div class="trait-bars" id="trait-bars"></div>
+  <div class="section-label" style="margin-top:20px;">Твои черты</div>
+  <div class="all-tags" id="all-tags"></div>
+  <div class="section-label">История</div>
+  <div id="history-list"></div>
+  <button class="btn-back" onclick="showQuestion()">← К вопросу дня</button>
+</div>
+
+<!-- PAYWALL -->
+<div class="screen" id="screen-paywall">
+  <div class="paywall-icon">🔓</div>
+  <div class="paywall-title">Открой полный портрет</div>
+  <div class="paywall-sub">7 дней позади. Твой портрет ждёт раскрытия.</div>
+  <div class="paywall-perks">
+    <div class="perk"><div class="perk-icon">📊</div><div>Полная карта личности с 20+ чертами</div></div>
+    <div class="perk"><div class="perk-icon">📅</div><div>Все ответы и инсайты навсегда</div></div>
+    <div class="perk"><div class="perk-icon">🔄</div><div>Сравнение «я сейчас» и «я через год»</div></div>
+    <div class="perk"><div class="perk-icon">∞</div><div>Безлимитные вопросы навсегда</div></div>
+  </div>
+  <div class="price-badge">299 ₽</div>
+  <div class="price-note">Один раз — навсегда</div>
+  <button class="btn-primary" onclick="pay()">Получить полный портрет</button>
+  <button class="btn-back" style="margin-top:12px;max-width:340px;" onclick="showQuestion()">Позже</button>
+</div>
+
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+const QUESTIONS = [
+  "Вспомни момент, когда ты чувствовал себя по-настоящему живым. Где ты был и что происходило вокруг?",
+  "Если бы тебе нужно было объяснить своё детство одним запахом или звуком — что бы это было?",
+  "Какое решение ты до сих пор не можешь принять? Почему оно такое тяжёлое?",
+  "Кто в твоей жизни видит тебя лучше всего? Что именно они замечают в тебе?",
+  "Чего ты больше всего боишься в будущем — и откуда этот страх?",
+  "Если бы твой лучший друг описывал тебя незнакомцу — что бы он сказал первым делом?",
+  "В какой момент ты последний раз чувствовал гордость за себя?",
+  "Есть ли что-то, от чего ты давно хочешь отказаться, но не можешь?",
+  "Когда ты в последний раз делал что-то впервые? Как это ощущалось?",
+  "Если бы ты мог изменить одно решение из прошлого — какое и почему?"
+];
+
+const TRAIT_NAMES = ['Самопознание','Эмпатия','Рефлексия','Открытость','Перфекционизм'];
+const TRAIT_COLORS = ['#4ecb8d','#a78bfa','#4ecb8d','#a78bfa','#f87171'];
+
+let state = JSON.parse(localStorage.getItem('zerkalo_v1') || 'null') || {
+  day: 1, streak: 1, currentQ: 0, paid: false, history: [], allTraits: []
+};
+
+function save() { localStorage.setItem('zerkalo_v1', JSON.stringify(state)); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function pluralDays(n) {
+  if (n%10===1 && n%100!==11) return 'день';
+  if ([2,3,4].includes(n%10) && ![12,13,14].includes(n%100)) return 'дня';
+  return 'дней';
+}
+function pluralAnswers(n) {
+  if (n%10===1 && n%100!==11) return 'ответ';
+  if ([2,3,4].includes(n%10) && ![12,13,14].includes(n%100)) return 'ответа';
+  return 'ответов';
+}
+
+function showQuestion() {
+  if (!state.paid && state.day > 7) { showScreen('screen-paywall'); return; }
+  document.getElementById('q-text').textContent = QUESTIONS[state.currentQ % QUESTIONS.length];
+  document.getElementById('day-chip').textContent = 'День ' + state.day;
+  document.getElementById('streak-chip').textContent = '🔥 ' + state.streak + ' ' + pluralDays(state.streak);
+  document.getElementById('answer-input').value = '';
+  document.getElementById('char-count').textContent = '0';
+  document.getElementById('btn-send').disabled = true;
+  renderDots();
+  showScreen('screen-question');
+}
+
+function renderDots() {
+  const total = Math.min(state.history.length + 4, 12);
+  const row = document.getElementById('dots-row');
+  row.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < state.history.length ? ' done' : i === state.history.length ? ' current' : '');
+    row.appendChild(d);
+  }
+}
+
+function onInput() {
+  const v = document.getElementById('answer-input').value;
+  document.getElementById('char-count').textContent = v.length;
+  document.getElementById('btn-send').disabled = v.trim().length < 10;
+}
+
+async function submitAnswer() {
+  const answer = document.getElementById('answer-input').value.trim();
+  const question = QUESTIONS[state.currentQ % QUESTIONS.length];
+  const btn = document.getElementById('btn-send');
+  btn.disabled = true;
+  btn.textContent = 'Анализирую...';
+
+  document.getElementById('echo-answer').textContent = answer;
+  document.getElementById('insight-body').innerHTML = '<span class="spinner"></span> Читаю тебя...';
+  document.getElementById('traits-wrap').innerHTML = '';
+  showScreen('screen-insight');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        system: 'Ты психолог-аналитик приложения Зеркало. Отвечай ТОЛЬКО валидным JSON без markdown и backticks:\n{"insight":"2-3 предложения напрямую к человеку (ты/твой). Точно, неожиданно, с теплотой.","traits":["черта1","черта2","черта3"]}',
+        messages: [{ role: 'user', content: 'Вопрос: "' + question + '"\nОтвет: "' + answer + '"' }]
+      })
+    });
+    const data = await res.json();
+    const raw = (data.content || []).map(function(i){ return i.text || ''; }).join('').trim();
+    const match = raw.match(/\{[\s\S]*\}/);
+    const parsed = match ? JSON.parse(match[0]) : { insight: 'Не удалось получить инсайт. Попробуй ещё раз.', traits: [] };
+
+    document.getElementById('insight-body').textContent = parsed.insight || '';
+    const tw = document.getElementById('traits-wrap');
+    (parsed.traits || []).forEach(function(t) {
+      const s = document.createElement('span');
+      s.className = 'trait-tag';
+      s.textContent = t;
+      tw.appendChild(s);
+    });
+
+    state.history.push({ q: question, a: answer, insight: parsed.insight || '', traits: parsed.traits || [] });
+    const newTraits = (parsed.traits || []).filter(function(t){ return !state.allTraits.includes(t); });
+    state.allTraits = state.allTraits.concat(newTraits);
+    state.currentQ++;
+    save();
+
+  } catch(e) {
+    document.getElementById('insight-body').textContent = 'Ошибка соединения. Проверь интернет и попробуй снова.';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Получить инсайт ↗';
+}
+
+function nextQuestion() {
+  state.day++;
+  state.streak++;
+  save();
+  showQuestion();
+}
+
+function showPortrait() {
+  const h = state.history;
+  document.getElementById('portrait-sub').textContent = h.length + ' ' + pluralAnswers(h.length) + ' · ' + state.day + ' ' + pluralDays(state.day);
+  document.getElementById('ps-answers').textContent = h.length;
+  document.getElementById('ps-traits').textContent = state.allTraits.length;
+  document.getElementById('ps-days').textContent = state.day;
+
+  const scores = [
+    Math.min(95, 40 + h.length * 8),
+    Math.min(90, 30 + h.length * 9),
+    Math.min(88, 50 + h.length * 6),
+    Math.min(85, 35 + h.length * 7),
+    71
+  ];
+  const bars = document.getElementById('trait-bars');
+  bars.innerHTML = TRAIT_NAMES.map(function(name, i) {
+    return '<div class="bar-row"><div class="bar-meta"><span class="bar-name">' + name + '</span><span class="bar-pct">' + scores[i] + '</span></div><div class="bar-bg"><div class="bar-fill" style="width:0%;background:' + TRAIT_COLORS[i] + '" data-w="' + scores[i] + '%"></div></div></div>';
+  }).join('');
+  setTimeout(function() {
+    bars.querySelectorAll('.bar-fill').forEach(function(b){ b.style.width = b.dataset.w; });
+  }, 120);
+
+  const tags = document.getElementById('all-tags');
+  tags.innerHTML = state.allTraits.length
+    ? state.allTraits.map(function(t){ return '<span class="trait-tag">' + t + '</span>'; }).join('')
+    : '<span style="font-size:14px;color:var(--text3)">Ответь на вопросы — черты появятся здесь</span>';
+
+  const hist = document.getElementById('history-list');
+  if (!h.length) {
+    hist.innerHTML = '<div style="font-size:14px;color:var(--text3);padding:16px 0;">Пока нет ответов. Начни с первого вопроса!</div>';
+  } else {
+    hist.innerHTML = h.slice().reverse().map(function(item) {
+      return '<div class="history-item"><div class="hist-q">' + item.q.slice(0,65) + '...</div><div class="hist-a">' + item.a + '</div><div class="hist-insight">✦ ' + item.insight + '</div></div>';
+    }).join('');
+  }
+  showScreen('screen-portrait');
+}
+
+function pay() {
+  alert('Оплата через Telegram Stars: настрой через бота по инструкции ниже.');
+}
+
+showScreen('screen-welcome');
+</script>
+</body>
+</html>
