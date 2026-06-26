@@ -101,6 +101,13 @@
   .paywall-icon { font-size: 56px; margin-bottom: 20px; }
   .paywall-title { font-size: 26px; font-weight: 700; margin-bottom: 10px; }
   .paywall-sub { font-size: 15px; color: var(--text2); line-height: 1.6; max-width: 280px; margin: 0 auto 28px; }
+  #screen-waiting { align-items: center; justify-content: center; text-align: center; }
+  .waiting-icon { font-size: 56px; margin-bottom: 20px; animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+  .waiting-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 24px; width: 100%; max-width: 320px; }
+  .waiting-countdown { font-size: 32px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .waiting-countdown-label { font-size: 13px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
+  .streak-banner { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--accent-dim); color: var(--accent); border-radius: 20px; padding: 8px 18px; font-size: 14px; margin-bottom: 28px; }
   .paywall-perks { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 24px; text-align: left; width: 100%; max-width: 340px; }
   .perk { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; font-size: 15px; line-height: 1.4; }
   .perk:last-child { margin-bottom: 0; }
@@ -205,10 +212,15 @@
 
 <!-- WAITING -->
 <div class="screen" id="screen-waiting">
-  <div class="paywall-icon">⏳</div>
-  <div class="paywall-title">Вопрос дня уже отвечен</div>
-  <div class="paywall-sub" id="waiting-text">Возвращайся завтра за новым вопросом.</div>
-  <button class="btn-back" style="max-width:340px;" onclick="showPortrait()">Посмотреть мой портрет</button>
+  <div class="waiting-icon">⏳</div>
+  <div class="paywall-title">Вопрос дня отвечен</div>
+  <div class="paywall-sub">Возвращайся за новым — портрет растёт каждый день.</div>
+  <div class="waiting-card">
+    <div class="waiting-countdown" id="waiting-hours">24</div>
+    <div class="waiting-countdown-label" id="waiting-label">часов до следующего вопроса</div>
+  </div>
+  <div class="streak-banner">🔥 <span id="waiting-streak">1 день</span> подряд</div>
+  <button class="btn-primary" onclick="showPortrait()">Посмотреть мой портрет</button>
 </div>
 
 <script>
@@ -294,8 +306,9 @@ function showQuestion(skipPaywallCheck) {
   if (hoursSinceLast < 24) {
     const hoursLeft = Math.ceil(24 - hoursSinceLast);
     showScreen('screen-waiting');
-    document.getElementById('waiting-text').textContent =
-      'Следующий вопрос откроется через ' + hoursLeft + ' ' + pluralHours(hoursLeft) + '.';
+    document.getElementById('waiting-hours').textContent = hoursLeft;
+    document.getElementById('waiting-label').textContent = pluralHours(hoursLeft) + ' до следующего вопроса';
+    document.getElementById('waiting-streak').textContent = state.streak + ' ' + pluralDays(state.streak);
     return;
   }
 
