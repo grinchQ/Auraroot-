@@ -287,11 +287,10 @@ async function submitAnswer() {
   showScreen('screen-insight');
 
   try {
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
+    const res = await fetch('https://zerkalo-proxy.maksikrest.workers.dev/', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sk-93b354997299440c97eaf85155253068'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
