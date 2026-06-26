@@ -182,7 +182,7 @@
   <div class="all-tags" id="all-tags"></div>
   <div class="section-label">История</div>
   <div id="history-list"></div>
-  <button class="btn-back" onclick="showQuestion()">← К вопросу дня</button>
+  <button class="btn-back" onclick="showQuestion()">← Назад</button>
 </div>
 
 <!-- PAYWALL -->
@@ -199,10 +199,20 @@
   <div class="price-badge">299 ₽</div>
   <div class="price-note">Один раз — навсегда</div>
   <button class="btn-primary" onclick="pay()">Получить полный портрет</button>
-  <button class="btn-back" style="margin-top:12px;max-width:340px;" onclick="showQuestion()">Позже</button>
+  <button class="btn-back" style="margin-top:12px;max-width:340px;" onclick="showPortrait()">Посмотреть мой портрет</button>
+  <button class="btn-back" style="margin-top:10px;max-width:340px;background:transparent;border:none;color:var(--text3);" onclick="dismissPaywall()">Позже</button>
+</div>
+
+<!-- WAITING -->
+<div class="screen" id="screen-waiting">
+  <div class="paywall-icon">⏳</div>
+  <div class="paywall-title">Вопрос дня уже отвечен</div>
+  <div class="paywall-sub" id="waiting-text">Возвращайся завтра за новым вопросом.</div>
+  <button class="btn-back" style="max-width:340px;" onclick="showPortrait()">Посмотреть мой портрет</button>
 </div>
 
 <script>
+
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
@@ -222,11 +232,42 @@ const QUESTIONS = [
 const TRAIT_NAMES = ['Самопознание','Эмпатия','Рефлексия','Открытость','Перфекционизм'];
 const TRAIT_COLORS = ['#4ecb8d','#a78bfa','#4ecb8d','#a78bfa','#f87171'];
 
-let state = JSON.parse(localStorage.getItem('zerkalo_v1') || 'null') || {
-  day: 1, streak: 1, currentQ: 0, paid: false, history: [], allTraits: []
+let state = {
+  day: 1, streak: 1, currentQ: 0, paid: false, history: [], allTraits: [], lastAnswerAt: null
 };
 
-function save() { localStorage.setItem('zerkalo_v1', JSON.stringify(state)); }
+const STORAGE_KEY = 'zerkalo_v1';
+const hasCloud = !!(tg && tg.CloudStorage);
+
+function loadState(callback) {
+  if (hasCloud) {
+    tg.CloudStorage.getItem(STORAGE_KEY, function(err, value) {
+      if (!err && value) {
+        try { state = Object.assign(state, JSON.parse(value)); } catch(e) {}
+      }
+      callback();
+    });
+  } else {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) state = Object.assign(state, JSON.parse(raw));
+    } catch(e) {}
+    callback();
+  }
+}
+
+function save() {
+  const json = JSON.stringify(state);
+  if (hasCloud && json.length < 4000) {
+    tg.CloudStorage.setItem(STORAGE_KEY, json, function(err) {
+      if (err) {
+        try { localStorage.setItem(STORAGE_KEY, json); } catch(e) {}
+      }
+    });
+  } else {
+    try { localStorage.setItem(STORAGE_KEY, json); } catch(e) {}
+  }
+}
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -245,8 +286,19 @@ function pluralAnswers(n) {
   return 'ответов';
 }
 
-function showQuestion() {
-  if (!state.paid && state.day > 7) { showScreen('screen-paywall'); return; }
+function showQuestion(skipPaywallCheck) {
+  if (!skipPaywallCheck && !state.paid && state.day > 7) { showScreen('screen-paywall'); return; }
+
+  const now = Date.now();
+  const hoursSinceLast = state.lastAnswerAt ? (now - state.lastAnswerAt) / 3600000 : 999;
+  if (hoursSinceLast < 24) {
+    const hoursLeft = Math.ceil(24 - hoursSinceLast);
+    showScreen('screen-waiting');
+    document.getElementById('waiting-text').textContent =
+      'Следующий вопрос откроется через ' + hoursLeft + ' ' + pluralHours(hoursLeft) + '.';
+    return;
+  }
+
   document.getElementById('q-text').textContent = QUESTIONS[state.currentQ % QUESTIONS.length];
   document.getElementById('day-chip').textContent = 'День ' + state.day;
   document.getElementById('streak-chip').textContent = '🔥 ' + state.streak + ' ' + pluralDays(state.streak);
@@ -255,6 +307,17 @@ function showQuestion() {
   document.getElementById('btn-send').disabled = true;
   renderDots();
   showScreen('screen-question');
+}
+
+function dismissPaywall() {
+  showScreen('screen-question');
+  showQuestion(true);
+}
+
+function pluralHours(n) {
+  if (n%10===1 && n%100!==11) return 'час';
+  if ([2,3,4].includes(n%10) && ![12,13,14].includes(n%100)) return 'часа';
+  return 'часов';
 }
 
 function renderDots() {
@@ -319,6 +382,7 @@ async function submitAnswer() {
     const newTraits = (parsed.traits || []).filter(function(t){ return !state.allTraits.includes(t); });
     state.allTraits = state.allTraits.concat(newTraits);
     state.currentQ++;
+    state.lastAnswerAt = Date.now();
     save();
 
   } catch(e) {
@@ -378,7 +442,14 @@ function pay() {
   alert('Оплата через Telegram Stars: настрой через бота по инструкции ниже.');
 }
 
-showScreen('screen-welcome');
+loadState(function() {
+  if (state.history && state.history.length > 0) {
+    showQuestion();
+  } else {
+    showScreen('screen-welcome');
+  }
+});
+
 </script>
 </body>
 </html>
