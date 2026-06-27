@@ -418,7 +418,7 @@ async function submitAnswer() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-flash',
         max_tokens: 600,
         messages: [
           { role: 'system', content: 'Ты психолог-аналитик приложения Зеркало. Отвечай ТОЛЬКО валидным JSON без markdown и backticks:\n{"insight":"2-3 предложения напрямую к человеку (ты/твой). Точно, неожиданно, с теплотой.","traits":["черта1","черта2","черта3"]}' },
