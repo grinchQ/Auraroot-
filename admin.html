@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Зеркало — Админка</title>
+<style>
+  :root {
+    --bg: #0e0e0f;
+    --bg2: #1a1a1b;
+    --bg3: #242425;
+    --text: #f0ede8;
+    --text2: #9a9793;
+    --text3: #5a5855;
+    --accent: #c8f0d8;
+    --accent-dim: #1e3329;
+    --border: rgba(255,255,255,0.08);
+    --teal: #4ecb8d;
+    --purple: #a78bfa;
+    --coral: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Inter', sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; }
+
+  /* LOGIN */
+  #login-screen { display: flex; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
+  .login-icon { font-size: 48px; margin-bottom: 16px; }
+  .login-title { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .login-sub { font-size: 14px; color: var(--text2); margin-bottom: 28px; }
+  .login-input { width: 100%; max-width: 280px; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; font-size: 16px; color: var(--text); outline: none; margin-bottom: 12px; text-align: center; }
+  .login-input:focus { border-color: rgba(200,240,216,0.3); }
+  .login-btn { width: 100%; max-width: 280px; background: var(--accent); color: #081a0e; font-size: 15px; font-weight: 700; border: none; border-radius: 14px; padding: 14px; cursor: pointer; }
+  .login-error { color: var(--coral); font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+  /* DASHBOARD */
+  #dashboard-screen { display: none; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .header-title { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .refresh-btn { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; font-size: 13px; color: var(--text2); cursor: pointer; }
+  .refresh-btn:active { background: var(--bg3); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 18px; }
+  .stat-val { font-size: 28px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat-lbl { font-size: 12px; color: var(--text3); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card.money .stat-val { color: var(--teal); }
+  .stat-card.warn .stat-val { color: var(--coral); }
+
+  .section-title { font-size: 13px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin: 28px 0 12px; }
+  .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 12px 14px; color: var(--text3); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text2); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; }
+  .badge-paid { background: var(--accent-dim); color: var(--accent); }
+  .badge-free { background: var(--bg3); color: var(--text3); }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+  .loading-state { text-align: center; padding: 40px 20px; color: var(--text2); font-size: 14px; }
+  .table-scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-icon">🪞</div>
+  <div class="login-title">Зеркало — Админка</div>
+  <div class="login-sub">Введи пароль для доступа к статистике</div>
+  <input type="password" class="login-input" id="password-input" placeholder="Пароль" onkeydown="if(event.key==='Enter') tryLogin()">
+  <button class="login-btn" onclick="tryLogin()">Войти</button>
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-screen">
+  <div class="wrap">
+    <div class="header">
+      <div class="header-title">🪞 Зеркало — Статистика</div>
+      <button class="refresh-btn" onclick="loadStats()">↻ Обновить</button>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-users">—</div>
+        <div class="stat-lbl">пользователей</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-answers">—</div>
+        <div class="stat-lbl">всего ответов</div>
+      </div>
+      <div class="stat-card money">
+        <div class="stat-val" id="stat-paid">—</div>
+        <div class="stat-lbl">оплатили</div>
+      </div>
+      <div class="stat-card money">
+        <div class="stat-val" id="stat-revenue">—</div>
+        <div class="stat-lbl">выручка (₽)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-today">—</div>
+        <div class="stat-lbl">ответов сегодня</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-val" id="stat-conversion">—</div>
+        <div class="stat-lbl">конверсия</div>
+      </div>
+    </div>
+
+    <div class="section-title">Последние пользователи</div>
+    <div class="table-wrap">
+      <div class="table-scroll" id="users-table-wrap">
+        <div class="loading-state">Загрузка...</div>
+      </div>
+    </div>
+
+    <div class="section-title">Последние ответы</div>
+    <div class="table-wrap">
+      <div class="table-scroll" id="answers-table-wrap">
+        <div class="loading-state">Загрузка...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PASSWORD = 'zerkalo2026';
+const SUPABASE_URL = 'https://aslxuicwktgcfcrvzfur.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzbHh1aWN3a3RnY2ZjcnZ6ZnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1ODc3OTIsImV4cCI6MjA5ODE2Mzc5Mn0.PyffCOHj-R-hG2IrB5na-6fva-7usKXHvAKtWzl7LMo';
+const PRICE_RUB = 299;
+
+function tryLogin() {
+  const val = document.getElementById('password-input').value;
+  if (val === ADMIN_PASSWORD) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard-screen').style.display = 'block';
+    sessionStorage.setItem('zerkalo_admin_auth', '1');
+    loadStats();
+  } else {
+    document.getElementById('login-error').textContent = 'Неверный пароль';
+  }
+}
+
+async function sbGet(path) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      }
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch(e) {
+    return [];
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '—';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'только что';
+  if (mins < 60) return mins + ' мин назад';
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + ' ч назад';
+  return Math.floor(hours / 24) + ' дн назад';
+}
+
+async function loadStats() {
+  const usersWrap = document.getElementById('users-table-wrap');
+  const answersWrap = document.getElementById('answers-table-wrap');
+  usersWrap.innerHTML = '<div class="loading-state">Загрузка...</div>';
+  answersWrap.innerHTML = '<div class="loading-state">Загрузка...</div>';
+
+  const users = await sbGet('users?select=*&order=created_at.desc&limit=200');
+  const answers = await sbGet('answers?select=*&order=created_at.desc&limit=50');
+  const allAnswersCount = await sbGet('answers?select=id');
+
+  const totalUsers = users.length;
+  const totalAnswers = allAnswersCount.length;
+  const paidUsers = users.filter(function(u){ return u.paid; });
+  const revenue = paidUsers.length * PRICE_RUB;
+  const conversion = totalUsers > 0 ? Math.round((paidUsers.length / totalUsers) * 100) : 0;
+
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  const answersToday = answers.filter(function(a){ return new Date(a.created_at) >= todayStart; }).length;
+
+  document.getElementById('stat-users').textContent = totalUsers;
+  document.getElementById('stat-answers').textContent = totalAnswers;
+  document.getElementById('stat-paid').textContent = paidUsers.length;
+  document.getElementById('stat-revenue').textContent = revenue.toLocaleString('ru-RU');
+  document.getElementById('stat-today').textContent = answersToday;
+  document.getElementById('stat-conversion').textContent = conversion + '%';
+
+  if (!users.length) {
+    usersWrap.innerHTML = '<div class="empty-state">Пока нет пользователей. Поделись ботом, чтобы увидеть первые данные здесь.</div>';
+  } else {
+    let usersHtml = '<table><tr><th>ID</th><th>Имя</th><th>Username</th><th>Ответов</th><th>Стрик</th><th>Статус</th><th>Регистрация</th></tr>';
+    users.slice(0, 50).forEach(function(u) {
+      usersHtml += '<tr>' +
+        '<td>' + escapeHtml(u.id) + '</td>' +
+        '<td>' + escapeHtml(u.first_name || '—') + '</td>' +
+        '<td>' + (u.username ? '@' + escapeHtml(u.username) : '—') + '</td>' +
+        '<td>' + escapeHtml(u.answers_count || 0) + '</td>' +
+        '<td>🔥 ' + escapeHtml(u.streak || 1) + '</td>' +
+        '<td><span class="badge ' + (u.paid ? 'badge-paid' : 'badge-free') + '">' + (u.paid ? 'Оплачено' : 'Бесплатно') + '</span></td>' +
+        '<td>' + timeAgo(u.created_at) + '</td>' +
+        '</tr>';
+    });
+    usersHtml += '</table>';
+    usersWrap.innerHTML = usersHtml;
+  }
+
+  if (!answers.length) {
+    answersWrap.innerHTML = '<div class="empty-state">Пока нет ответов.</div>';
+  } else {
+    let answersHtml = '<table><tr><th>Пользователь</th><th>Вопрос</th><th>Ответ</th><th>Когда</th></tr>';
+    answers.slice(0, 50).forEach(function(a) {
+      answersHtml += '<tr>' +
+        '<td>' + escapeHtml(a.user_id) + '</td>' +
+        '<td>' + escapeHtml((a.question || '').slice(0, 40)) + '...</td>' +
+        '<td>' + escapeHtml((a.answer || '').slice(0, 40)) + '</td>' +
+        '<td>' + timeAgo(a.created_at) + '</td>' +
+        '</tr>';
+    });
+    answersHtml += '</table>';
+    answersWrap.innerHTML = answersHtml;
+  }
+}
+
+if (sessionStorage.getItem('zerkalo_admin_auth') === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard-screen').style.display = 'block';
+  loadStats();
+}
+</script>
+</body>
+</html>
