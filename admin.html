@@ -115,13 +115,6 @@
         <div class="loading-state">Загрузка...</div>
       </div>
     </div>
-
-    <div class="section-title">Последние ответы</div>
-    <div class="table-wrap">
-      <div class="table-scroll" id="answers-table-wrap">
-        <div class="loading-state">Загрузка...</div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -177,23 +170,20 @@ function timeAgo(dateStr) {
 
 async function loadStats() {
   const usersWrap = document.getElementById('users-table-wrap');
-  const answersWrap = document.getElementById('answers-table-wrap');
   usersWrap.innerHTML = '<div class="loading-state">Загрузка...</div>';
-  answersWrap.innerHTML = '<div class="loading-state">Загрузка...</div>';
 
   const users = await sbGet('users?select=*&order=created_at.desc&limit=200');
-  const answers = await sbGet('answers?select=*&order=created_at.desc&limit=50');
-  const allAnswersCount = await sbGet('answers?select=id');
+  const allAnswersMeta = await sbGet('answers?select=id,created_at');
 
   const totalUsers = users.length;
-  const totalAnswers = allAnswersCount.length;
+  const totalAnswers = allAnswersMeta.length;
   const paidUsers = users.filter(function(u){ return u.paid; });
   const revenue = paidUsers.length * PRICE_RUB;
   const conversion = totalUsers > 0 ? Math.round((paidUsers.length / totalUsers) * 100) : 0;
 
   const todayStart = new Date();
   todayStart.setHours(0,0,0,0);
-  const answersToday = answers.filter(function(a){ return new Date(a.created_at) >= todayStart; }).length;
+  const answersToday = allAnswersMeta.filter(function(a){ return new Date(a.created_at) >= todayStart; }).length;
 
   document.getElementById('stat-users').textContent = totalUsers;
   document.getElementById('stat-answers').textContent = totalAnswers;
@@ -219,22 +209,6 @@ async function loadStats() {
     });
     usersHtml += '</table>';
     usersWrap.innerHTML = usersHtml;
-  }
-
-  if (!answers.length) {
-    answersWrap.innerHTML = '<div class="empty-state">Пока нет ответов.</div>';
-  } else {
-    let answersHtml = '<table><tr><th>Пользователь</th><th>Вопрос</th><th>Ответ</th><th>Когда</th></tr>';
-    answers.slice(0, 50).forEach(function(a) {
-      answersHtml += '<tr>' +
-        '<td>' + escapeHtml(a.user_id) + '</td>' +
-        '<td>' + escapeHtml((a.question || '').slice(0, 40)) + '...</td>' +
-        '<td>' + escapeHtml((a.answer || '').slice(0, 40)) + '</td>' +
-        '<td>' + timeAgo(a.created_at) + '</td>' +
-        '</tr>';
-    });
-    answersHtml += '</table>';
-    answersWrap.innerHTML = answersHtml;
   }
 }
 
