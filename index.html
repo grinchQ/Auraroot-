@@ -228,6 +228,55 @@
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
+const SUPABASE_URL = 'https://aslxuicwktgcfcrvzfur.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzbHh1aWN3a3RnY2ZjcnZ6ZnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1ODc3OTIsImV4cCI6MjA5ODE2Mzc5Mn0.PyffCOHj-R-hG2IrB5na-6fva-7usKXHvAKtWzl7LMo';
+
+const tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
+const userId = tgUser ? tgUser.id : null;
+
+async function sbRequest(path, method, body) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+      method: method,
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    return res;
+  } catch(e) {
+    return null;
+  }
+}
+
+async function ensureUserInDb() {
+  if (!userId) return;
+  await sbRequest('users', 'POST', {
+    id: userId,
+    username: tgUser.username || null,
+    first_name: tgUser.first_name || null
+  });
+}
+
+async function logAnswerToDb(question, answer, insight, traits) {
+  if (!userId) return;
+  await sbRequest('answers', 'POST', {
+    user_id: userId,
+    question: question,
+    answer: answer,
+    insight: insight,
+    traits: (traits || []).join(', ')
+  });
+  await sbRequest('users?id=eq.' + userId, 'PATCH', {
+    last_answer_at: new Date().toISOString(),
+    answers_count: state.history.length,
+    streak: state.streak
+  });
+}
+
 const QUESTIONS = [
   "Вспомни момент, когда ты чувствовал себя по-настоящему живым. Где ты был и что происходило вокруг?",
   "Если бы тебе нужно было объяснить своё детство одним запахом или звуком — что бы это было?",
@@ -397,6 +446,7 @@ async function submitAnswer() {
     state.currentQ++;
     state.lastAnswerAt = Date.now();
     save();
+    logAnswerToDb(question, answer, parsed.insight || '', parsed.traits || []);
 
   } catch(e) {
     document.getElementById('insight-body').textContent = 'Ошибка соединения. Проверь интернет и попробуй снова.';
@@ -456,6 +506,7 @@ function pay() {
 }
 
 loadState(function() {
+  ensureUserInDb();
   if (state.history && state.history.length > 0) {
     showQuestion();
   } else {
