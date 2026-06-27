@@ -398,26 +398,57 @@ function onInput() {
   document.getElementById('btn-send').disabled = v.trim().length < 10;
 }
 
+function sleep(ms) {
+  return new Promise(function(resolve) { setTimeout(resolve, ms); });
+}
+
 async function getInsight(question, answer) {
-  const res = await fetch('https://zerkalo-proxy.maksikrest.workers.dev/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'deepseek-v4-flash',
-      max_tokens: 600,
-      messages: [
-        { role: 'system', content: 'Ты психолог-аналитик приложения Зеркало. Отвечай ТОЛЬКО валидным JSON без markdown и backticks:\n{"insight":"2-3 предложения напрямую к человеку (ты/твой). Точно, неожиданно, с теплотой.","traits":["черта1","черта2","черта3"]}' },
-        { role: 'user', content: 'Вопрос: "' + question + '"\nОтвет: "' + answer + '"' }
-      ]
-    })
-  });
-  const data = await res.json();
-  const raw = (data.choices && data.choices[0]) ? data.choices[0].message.content.trim() : '';
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('no_json');
-  const parsed = JSON.parse(match[0]);
-  if (!parsed.insight) throw new Error('no_insight');
-  return parsed;
+  const maxAttempts = 3;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch('https://zerkalo-proxy.maksikrest.workers.dev/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-v4-flash',
+          max_tokens: 600,
+          messages: [
+            { role: 'system', content: 'Ты психолог-аналитик приложения Зеркало. Отвечай ТОЛЬКО валидным JSON без markdown и backticks:\n{"insight":"2-3 предложения напрямую к человеку (ты/твой). Точно, неожиданно, с теплотой.","traits":["черта1","черта2","черта3"]}' },
+            { role: 'user', content: 'Вопрос: "' + question + '"\nОтвет: "' + answer + '"' }
+          ]
+        })
+      });
+
+      if (res.status === 429 || res.status === 503) {
+        lastError = new Error('overloaded_' + res.status);
+        if (attempt < maxAttempts) {
+          await sleep(attempt * 1000);
+          continue;
+        }
+        throw lastError;
+      }
+
+      const data = await res.json();
+      const raw = (data.choices && data.choices[0]) ? data.choices[0].message.content.trim() : '';
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('no_json');
+      const parsed = JSON.parse(match[0]);
+      if (!parsed.insight) throw new Error('no_insight');
+      return parsed;
+
+    } catch(e) {
+      lastError = e;
+      const isOverload = e.message && e.message.indexOf('overloaded_') === 0;
+      if (isOverload && attempt < maxAttempts) {
+        await sleep(attempt * 1000);
+        continue;
+      }
+      if (!isOverload) break;
+    }
+  }
+  throw lastError;
 }
 
 let pendingAnswer = null;
