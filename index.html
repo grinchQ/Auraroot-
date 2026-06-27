@@ -168,7 +168,7 @@
     <div class="traits-wrap" id="traits-wrap"></div>
   </div>
   <div id="retry-wrap" style="display:none; margin-bottom:10px;">
-    <button class="btn-primary" style="max-width:none;" onclick="runInsightAttempt()">🔄 Попробовать ещё раз</button>
+    <button class="btn-primary" id="retry-btn" style="max-width:none;" onclick="runInsightAttempt()">🔄 Попробовать ещё раз</button>
   </div>
   <button class="btn-next" onclick="nextQuestion()">Следующий вопрос →</button>
   <button class="btn-portrait" onclick="showPortrait()">Мой портрет 🪞</button>
@@ -264,14 +264,10 @@ async function ensureUserInDb() {
   });
 }
 
-async function logAnswerToDb(question, answer, insight, traits) {
+async function logAnswerToDb() {
   if (!userId) return;
-  await sbRequest('answers', 'POST', {
-    user_id: userId,
-    question: question,
-    answer: answer,
-    insight: insight,
-    traits: (traits || []).join(', ')
+  await sbRequest('answer_events', 'POST', {
+    user_id: userId
   });
   await sbRequest('users?id=eq.' + userId, 'PATCH', {
     last_answer_at: new Date().toISOString(),
@@ -425,8 +421,10 @@ async function getInsight(question, answer) {
 }
 
 let pendingAnswer = null;
+let isRequestInFlight = false;
 
 async function submitAnswer() {
+  if (isRequestInFlight) return;
   const answer = document.getElementById('answer-input').value.trim();
   const question = QUESTIONS[state.currentQ % QUESTIONS.length];
   pendingAnswer = { question: question, answer: answer };
@@ -437,10 +435,14 @@ async function submitAnswer() {
 }
 
 async function runInsightAttempt() {
-  if (!pendingAnswer) return;
+  if (!pendingAnswer || isRequestInFlight) return;
+  isRequestInFlight = true;
+
   const body = document.getElementById('insight-body');
   const tw = document.getElementById('traits-wrap');
   const retryWrap = document.getElementById('retry-wrap');
+  const retryBtn = document.getElementById('retry-btn');
+  if (retryBtn) retryBtn.disabled = true;
   retryWrap.style.display = 'none';
   body.innerHTML = '<span class="spinner"></span> Читаю тебя...';
   tw.innerHTML = '';
@@ -462,12 +464,15 @@ async function runInsightAttempt() {
     state.currentQ++;
     state.lastAnswerAt = Date.now();
     save();
-    logAnswerToDb(pendingAnswer.question, pendingAnswer.answer, parsed.insight, parsed.traits || []);
+    logAnswerToDb();
     pendingAnswer = null;
 
   } catch(e) {
     body.textContent = 'Не получилось получить инсайт прямо сейчас. Это не твоя вина — попробуй ещё раз, обычно срабатывает.';
     retryWrap.style.display = 'block';
+  } finally {
+    isRequestInFlight = false;
+    if (retryBtn) retryBtn.disabled = false;
   }
 }
 
@@ -513,7 +518,7 @@ function showPortrait() {
       const realIdx = h.length - 1 - revIdx;
       const isBroken = !item.insight || item.insight.indexOf('Не удалось') !== -1 || item.insight.indexOf('Ошибка') !== -1;
       const insightHtml = isBroken
-        ? '<button class="trait-tag" style="border:none;cursor:pointer;" onclick="retryHistoryItem(' + realIdx + ')">🔄 Получить инсайт для этого ответа</button>'
+        ? '<button class="trait-tag" id="retry-hist-' + realIdx + '" style="border:none;cursor:pointer;" onclick="retryHistoryItem(' + realIdx + ', this)">🔄 Получить инсайт для этого ответа</button>'
         : '<div class="hist-insight">✦ ' + item.insight + '</div>';
       return '<div class="history-item"><div class="hist-q">' + item.q.slice(0,65) + '...</div><div class="hist-a">' + item.a + '</div>' + insightHtml + '</div>';
     }).join('');
@@ -521,9 +526,12 @@ function showPortrait() {
   showScreen('screen-portrait');
 }
 
-async function retryHistoryItem(idx) {
+async function retryHistoryItem(idx, btn) {
+  if (isRequestInFlight) return;
   const item = state.history[idx];
   if (!item) return;
+  isRequestInFlight = true;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Думаю...'; }
   try {
     const parsed = await getInsight(item.q, item.a);
     state.history[idx].insight = parsed.insight;
@@ -531,10 +539,12 @@ async function retryHistoryItem(idx) {
     const newTraits = (parsed.traits || []).filter(function(t){ return !state.allTraits.includes(t); });
     state.allTraits = state.allTraits.concat(newTraits);
     save();
-    logAnswerToDb(item.q, item.a, parsed.insight, parsed.traits || []);
     showPortrait();
   } catch(e) {
     alert('Снова не получилось. Попробуй чуть позже.');
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Получить инсайт для этого ответа'; }
+  } finally {
+    isRequestInFlight = false;
   }
 }
 

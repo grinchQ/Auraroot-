@@ -101,7 +101,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-val" id="stat-today">—</div>
-        <div class="stat-lbl">ответов сегодня</div>
+        <div class="stat-lbl">за 24 часа</div>
       </div>
       <div class="stat-card warn">
         <div class="stat-val" id="stat-conversion">—</div>
@@ -173,7 +173,7 @@ async function loadStats() {
   usersWrap.innerHTML = '<div class="loading-state">Загрузка...</div>';
 
   const users = await sbGet('users?select=*&order=created_at.desc&limit=200');
-  const allAnswersMeta = await sbGet('answers?select=id,created_at');
+  const allAnswersMeta = await sbGet('answer_events?select=id,created_at');
 
   const totalUsers = users.length;
   const totalAnswers = allAnswersMeta.length;
@@ -181,9 +181,8 @@ async function loadStats() {
   const revenue = paidUsers.length * PRICE_RUB;
   const conversion = totalUsers > 0 ? Math.round((paidUsers.length / totalUsers) * 100) : 0;
 
-  const todayStart = new Date();
-  todayStart.setHours(0,0,0,0);
-  const answersToday = allAnswersMeta.filter(function(a){ return new Date(a.created_at) >= todayStart; }).length;
+  const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const answersToday = allAnswersMeta.filter(function(a){ return new Date(a.created_at) >= last24h; }).length;
 
   document.getElementById('stat-users').textContent = totalUsers;
   document.getElementById('stat-answers').textContent = totalAnswers;
