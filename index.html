@@ -167,6 +167,9 @@
     <div class="insight-body" id="insight-body"></div>
     <div class="traits-wrap" id="traits-wrap"></div>
   </div>
+  <div id="retry-wrap" style="display:none; margin-bottom:10px;">
+    <button class="btn-primary" style="max-width:none;" onclick="runInsightAttempt()">🔄 Попробовать ещё раз</button>
+  </div>
   <button class="btn-next" onclick="nextQuestion()">Следующий вопрос →</button>
   <button class="btn-portrait" onclick="showPortrait()">Мой портрет 🪞</button>
 </div>
@@ -399,40 +402,53 @@ function onInput() {
   document.getElementById('btn-send').disabled = v.trim().length < 10;
 }
 
+async function getInsight(question, answer) {
+  const res = await fetch('https://zerkalo-proxy.maksikrest.workers.dev/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'deepseek-v4-flash',
+      max_tokens: 600,
+      messages: [
+        { role: 'system', content: 'Ты психолог-аналитик приложения Зеркало. Отвечай ТОЛЬКО валидным JSON без markdown и backticks:\n{"insight":"2-3 предложения напрямую к человеку (ты/твой). Точно, неожиданно, с теплотой.","traits":["черта1","черта2","черта3"]}' },
+        { role: 'user', content: 'Вопрос: "' + question + '"\nОтвет: "' + answer + '"' }
+      ]
+    })
+  });
+  const data = await res.json();
+  const raw = (data.choices && data.choices[0]) ? data.choices[0].message.content.trim() : '';
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('no_json');
+  const parsed = JSON.parse(match[0]);
+  if (!parsed.insight) throw new Error('no_insight');
+  return parsed;
+}
+
+let pendingAnswer = null;
+
 async function submitAnswer() {
   const answer = document.getElementById('answer-input').value.trim();
   const question = QUESTIONS[state.currentQ % QUESTIONS.length];
-  const btn = document.getElementById('btn-send');
-  btn.disabled = true;
-  btn.textContent = 'Анализирую...';
+  pendingAnswer = { question: question, answer: answer };
 
   document.getElementById('echo-answer').textContent = answer;
-  document.getElementById('insight-body').innerHTML = '<span class="spinner"></span> Читаю тебя...';
-  document.getElementById('traits-wrap').innerHTML = '';
   showScreen('screen-insight');
+  await runInsightAttempt();
+}
+
+async function runInsightAttempt() {
+  if (!pendingAnswer) return;
+  const body = document.getElementById('insight-body');
+  const tw = document.getElementById('traits-wrap');
+  const retryWrap = document.getElementById('retry-wrap');
+  retryWrap.style.display = 'none';
+  body.innerHTML = '<span class="spinner"></span> Читаю тебя...';
+  tw.innerHTML = '';
 
   try {
-    const res = await fetch('https://zerkalo-proxy.maksikrest.workers.dev/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'deepseek-v4-flash',
-        max_tokens: 600,
-        messages: [
-          { role: 'system', content: 'Ты психолог-аналитик приложения Зеркало. Отвечай ТОЛЬКО валидным JSON без markdown и backticks:\n{"insight":"2-3 предложения напрямую к человеку (ты/твой). Точно, неожиданно, с теплотой.","traits":["черта1","черта2","черта3"]}' },
-          { role: 'user', content: 'Вопрос: "' + question + '"\nОтвет: "' + answer + '"' }
-        ]
-      })
-    });
-    const data = await res.json();
-    const raw = (data.choices && data.choices[0]) ? data.choices[0].message.content.trim() : '';
-    const match = raw.match(/\{[\s\S]*\}/);
-    const parsed = match ? JSON.parse(match[0]) : { insight: 'Не удалось получить инсайт. Попробуй ещё раз.', traits: [] };
+    const parsed = await getInsight(pendingAnswer.question, pendingAnswer.answer);
 
-    document.getElementById('insight-body').textContent = parsed.insight || '';
-    const tw = document.getElementById('traits-wrap');
+    body.textContent = parsed.insight;
     (parsed.traits || []).forEach(function(t) {
       const s = document.createElement('span');
       s.className = 'trait-tag';
@@ -440,20 +456,19 @@ async function submitAnswer() {
       tw.appendChild(s);
     });
 
-    state.history.push({ q: question, a: answer, insight: parsed.insight || '', traits: parsed.traits || [] });
+    state.history.push({ q: pendingAnswer.question, a: pendingAnswer.answer, insight: parsed.insight, traits: parsed.traits || [] });
     const newTraits = (parsed.traits || []).filter(function(t){ return !state.allTraits.includes(t); });
     state.allTraits = state.allTraits.concat(newTraits);
     state.currentQ++;
     state.lastAnswerAt = Date.now();
     save();
-    logAnswerToDb(question, answer, parsed.insight || '', parsed.traits || []);
+    logAnswerToDb(pendingAnswer.question, pendingAnswer.answer, parsed.insight, parsed.traits || []);
+    pendingAnswer = null;
 
   } catch(e) {
-    document.getElementById('insight-body').textContent = 'Ошибка соединения. Проверь интернет и попробуй снова.';
+    body.textContent = 'Не получилось получить инсайт прямо сейчас. Это не твоя вина — попробуй ещё раз, обычно срабатывает.';
+    retryWrap.style.display = 'block';
   }
-
-  btn.disabled = false;
-  btn.textContent = 'Получить инсайт ↗';
 }
 
 function nextQuestion() {
@@ -494,11 +509,33 @@ function showPortrait() {
   if (!h.length) {
     hist.innerHTML = '<div style="font-size:14px;color:var(--text3);padding:16px 0;">Пока нет ответов. Начни с первого вопроса!</div>';
   } else {
-    hist.innerHTML = h.slice().reverse().map(function(item) {
-      return '<div class="history-item"><div class="hist-q">' + item.q.slice(0,65) + '...</div><div class="hist-a">' + item.a + '</div><div class="hist-insight">✦ ' + item.insight + '</div></div>';
+    hist.innerHTML = h.slice().reverse().map(function(item, revIdx) {
+      const realIdx = h.length - 1 - revIdx;
+      const isBroken = !item.insight || item.insight.indexOf('Не удалось') !== -1 || item.insight.indexOf('Ошибка') !== -1;
+      const insightHtml = isBroken
+        ? '<button class="trait-tag" style="border:none;cursor:pointer;" onclick="retryHistoryItem(' + realIdx + ')">🔄 Получить инсайт для этого ответа</button>'
+        : '<div class="hist-insight">✦ ' + item.insight + '</div>';
+      return '<div class="history-item"><div class="hist-q">' + item.q.slice(0,65) + '...</div><div class="hist-a">' + item.a + '</div>' + insightHtml + '</div>';
     }).join('');
   }
   showScreen('screen-portrait');
+}
+
+async function retryHistoryItem(idx) {
+  const item = state.history[idx];
+  if (!item) return;
+  try {
+    const parsed = await getInsight(item.q, item.a);
+    state.history[idx].insight = parsed.insight;
+    state.history[idx].traits = parsed.traits || [];
+    const newTraits = (parsed.traits || []).filter(function(t){ return !state.allTraits.includes(t); });
+    state.allTraits = state.allTraits.concat(newTraits);
+    save();
+    logAnswerToDb(item.q, item.a, parsed.insight, parsed.traits || []);
+    showPortrait();
+  } catch(e) {
+    alert('Снова не получилось. Попробуй чуть позже.');
+  }
 }
 
 function pay() {
