@@ -203,7 +203,6 @@
   </div>
   <div class="portrait-header">
     <div class="portrait-avatar">🪞</div>
-    <div class="portrait-name">Твой портрет</div>
     <div class="portrait-sub" id="portrait-sub"></div>
   </div>
   <div class="pstats">
@@ -529,12 +528,32 @@ let state = {
 const STORAGE_KEY = 'zerkalo_v1';
 const hasCloud = !!(tg && tg.CloudStorage);
 
+function migrateMissingDates() {
+  if (!state.history || !state.history.length) return;
+  let changed = false;
+  const missingCount = state.history.filter(function(item){ return !item.date; }).length;
+  if (missingCount === 0) return;
+
+  const now = Date.now();
+  let assigned = 0;
+  state.history.forEach(function(item) {
+    if (!item.date) {
+      const daysAgo = missingCount - assigned;
+      item.date = new Date(now - daysAgo * 86400000).toISOString();
+      assigned++;
+      changed = true;
+    }
+  });
+  if (changed) save();
+}
+
 function loadState(callback) {
   if (hasCloud) {
     tg.CloudStorage.getItem(STORAGE_KEY, function(err, value) {
       if (!err && value) {
         try { state = Object.assign(state, JSON.parse(value)); } catch(e) {}
       }
+      migrateMissingDates();
       callback();
     });
   } else {
@@ -542,6 +561,7 @@ function loadState(callback) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) state = Object.assign(state, JSON.parse(raw));
     } catch(e) {}
+    migrateMissingDates();
     callback();
   }
 }
