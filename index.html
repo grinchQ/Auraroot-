@@ -245,6 +245,14 @@ function initOnclickaAd() {
 }
 initOnclickaAd();
 
+function withTimeout(promise, ms) {
+  return new Promise(function(resolve, reject) {
+    const timer = setTimeout(function() { reject(new Error('timeout')); }, ms);
+    promise.then(function(v) { clearTimeout(timer); resolve(v); })
+           .catch(function(e) { clearTimeout(timer); reject(e); });
+  });
+}
+
 async function watchAdForExtraQuestion() {
   const btn = document.getElementById('watch-ad-btn');
   if (!onclickaShowAd) {
@@ -256,7 +264,7 @@ async function watchAdForExtraQuestion() {
   btn.textContent = '⏳ Загрузка рекламы...';
 
   try {
-    await onclickaShowAd();
+    await withTimeout(onclickaShowAd(), 15000);
     state.adWatchesToday = (state.adWatchesToday || 0) + 1;
     state.lastAnswerAt = null;
     save();
@@ -264,7 +272,11 @@ async function watchAdForExtraQuestion() {
   } catch(e) {
     btn.disabled = false;
     btn.textContent = '📺 Посмотреть рекламу и ответить сейчас (' + (3 - (state.adWatchesToday || 0)) + ' из 3 сегодня)';
-    alert('Не удалось загрузить рекламу. Попробуй чуть позже.');
+    if (e.message === 'timeout') {
+      alert('Реклама сейчас недоступна — попробуй немного позже. Это нормально для нового приложения, скоро должно появиться больше объявлений.');
+    } else {
+      alert('Не удалось загрузить рекламу. Попробуй чуть позже.');
+    }
   }
 }
 
