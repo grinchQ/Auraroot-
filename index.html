@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Зеркало</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://js.onclckvd.com/in-stream-ad-admanager/tma.js"></script>
 <style>
   :root {
     --bg: #0e0e0f;
@@ -223,6 +224,7 @@
     <div class="waiting-countdown-label" id="waiting-label">часов до следующего вопроса</div>
   </div>
   <div class="streak-banner">🔥 <span id="waiting-streak">1 день</span> подряд</div>
+  <button class="btn-primary" id="watch-ad-btn" style="display:none; background:var(--bg2); color:var(--accent); border:1px solid rgba(78,203,141,0.3);" onclick="watchAdForExtraQuestion()">📺 Посмотреть рекламу и ответить сейчас</button>
   <button class="btn-primary" onclick="showPortrait()">Посмотреть мой портрет</button>
 </div>
 
@@ -230,6 +232,41 @@
 
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
+
+const ONCLICKA_SPOT_ID = 6121766;
+let onclickaShowAd = null;
+
+function initOnclickaAd() {
+  if (window.initCdTma) {
+    window.initCdTma({ id: ONCLICKA_SPOT_ID })
+      .then(function(show) { onclickaShowAd = show; })
+      .catch(function(e) { console.log('OnClickA init failed', e); });
+  }
+}
+initOnclickaAd();
+
+async function watchAdForExtraQuestion() {
+  const btn = document.getElementById('watch-ad-btn');
+  if (!onclickaShowAd) {
+    btn.textContent = '⏳ Реклама загружается...';
+    setTimeout(initOnclickaAd, 500);
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '⏳ Загрузка рекламы...';
+
+  try {
+    await onclickaShowAd();
+    state.adWatchesToday = (state.adWatchesToday || 0) + 1;
+    state.lastAnswerAt = null;
+    save();
+    showQuestion();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '📺 Посмотреть рекламу и ответить сейчас (' + (3 - (state.adWatchesToday || 0)) + ' из 3 сегодня)';
+    alert('Не удалось загрузить рекламу. Попробуй чуть позже.');
+  }
+}
 
 const SUPABASE_URL = 'https://aslxuicwktgcfcrvzfur.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzbHh1aWN3a3RnY2ZjcnZ6ZnVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1ODc3OTIsImV4cCI6MjA5ODE2Mzc5Mn0.PyffCOHj-R-hG2IrB5na-6fva-7usKXHvAKtWzl7LMo';
@@ -408,7 +445,7 @@ const TRAIT_NAMES = ['Самопознание','Эмпатия','Рефлекс
 const TRAIT_COLORS = ['#4ecb8d','#a78bfa','#4ecb8d','#a78bfa','#f87171'];
 
 let state = {
-  day: 1, streak: 1, currentQ: 0, paid: false, history: [], allTraits: [], lastAnswerAt: null
+  day: 1, streak: 1, currentQ: 0, paid: false, history: [], allTraits: [], lastAnswerAt: null, adWatchesToday: 0, lastAdResetDate: null
 };
 
 const STORAGE_KEY = 'zerkalo_v1';
@@ -464,6 +501,13 @@ function pluralAnswers(n) {
 function showQuestion(skipPaywallCheck) {
   if (!skipPaywallCheck && !state.paid && state.day > 7) { showScreen('screen-paywall'); return; }
 
+  const todayStr = new Date().toDateString();
+  if (state.lastAdResetDate !== todayStr) {
+    state.adWatchesToday = 0;
+    state.lastAdResetDate = todayStr;
+    save();
+  }
+
   const now = Date.now();
   const hoursSinceLast = state.lastAnswerAt ? (now - state.lastAnswerAt) / 3600000 : 999;
   if (hoursSinceLast < 24) {
@@ -472,6 +516,16 @@ function showQuestion(skipPaywallCheck) {
     document.getElementById('waiting-hours').textContent = hoursLeft;
     document.getElementById('waiting-label').textContent = pluralHours(hoursLeft) + ' до следующего вопроса';
     document.getElementById('waiting-streak').textContent = state.streak + ' ' + pluralDays(state.streak);
+
+    const adBtn = document.getElementById('watch-ad-btn');
+    const watchesLeft = 3 - (state.adWatchesToday || 0);
+    if (state.day >= 2 && watchesLeft > 0) {
+      adBtn.style.display = 'block';
+      adBtn.disabled = false;
+      adBtn.textContent = '📺 Посмотреть рекламу и ответить сейчас (' + watchesLeft + ' из 3 сегодня)';
+    } else {
+      adBtn.style.display = 'none';
+    }
     return;
   }
 
