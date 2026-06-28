@@ -923,17 +923,42 @@ async function retryHistoryItem(idx, btn) {
   }
 }
 
+const BOT_WORKER_URL = 'https://zerkalo-bot-tg.maksikrest.workers.dev';
+
+async function syncPaidStatus() {
+  // Спрашиваем у бота-воркера, оплачен ли доступ (он проверит подпись Telegram)
+  try {
+    const initData = (tg && tg.initData) ? tg.initData : '';
+    if (!initData) return; // вне Telegram проверить нельзя
+    const res = await fetch(BOT_WORKER_URL + '/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: initData })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.paid === true && !state.paid) {
+      state.paid = true;
+      save();
+    }
+  } catch (e) {
+    // сбой проверки не должен ломать приложение — просто оставляем как есть
+  }
+}
+
 function pay() {
   alert('Оплата через Telegram Stars: настрой через бота по инструкции ниже.');
 }
 
 loadState(function() {
   ensureUserInDb();
-  if (state.history && state.history.length > 0) {
-    showQuestion();
-  } else {
-    showScreen('screen-welcome');
-  }
+  syncPaidStatus().then(function() {
+    if (state.history && state.history.length > 0) {
+      showQuestion();
+    } else {
+      showScreen('screen-welcome');
+    }
+  });
 });
 
 </script>
