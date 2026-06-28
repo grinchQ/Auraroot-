@@ -946,8 +946,38 @@ async function syncPaidStatus() {
   }
 }
 
-function pay() {
-  alert('Оплата через Telegram Stars: настрой через бота по инструкции ниже.');
+async function pay() {
+  // Просим у бота-воркера ссылку на счёт и открываем окно оплаты звёздами
+  try {
+    const initData = (tg && tg.initData) ? tg.initData : '';
+    if (!initData || !tg.openInvoice) {
+      alert('Оплата доступна только внутри Telegram.');
+      return;
+    }
+
+    const res = await fetch(BOT_WORKER_URL + '/invoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: initData })
+    });
+    if (!res.ok) { alert('Не удалось открыть оплату. Попробуй позже.'); return; }
+    const data = await res.json();
+    if (!data.invoiceLink) { alert('Не удалось создать счёт. Попробуй позже.'); return; }
+
+    tg.openInvoice(data.invoiceLink, function(status) {
+      if (status === 'paid') {
+        // Оплата прошла — подтягиваем статус из базы и открываем доступ
+        state.paid = true;
+        save();
+        syncPaidStatus().then(function() {
+          showQuestion(true);
+        });
+      }
+      // status может быть 'cancelled' / 'failed' — тогда ничего не делаем
+    });
+  } catch (e) {
+    alert('Ошибка оплаты. Попробуй позже.');
+  }
 }
 
 loadState(function() {
