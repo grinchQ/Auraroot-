@@ -308,11 +308,12 @@ function withTimeout(fn, ms) {
 }
 
 async function watchAdForExtraQuestion() {
+  const L = I18N[state.lang || detectLang()];
   const btn = document.getElementById('watch-ad-btn');
 
   if (!onclickaShowAd) {
     btn.disabled = true;
-    btn.textContent = '⏳ Реклама загружается...';
+    btn.textContent = L.adLoading;
     initOnclickaAd();
 
     const waitStart = Date.now();
@@ -322,14 +323,14 @@ async function watchAdForExtraQuestion() {
 
     if (!onclickaShowAd) {
       btn.disabled = false;
-      btn.textContent = '📺 Посмотреть рекламу и ответить сейчас (' + (3 - (state.adWatchesToday || 0)) + ' из 3 сегодня)';
-      alert('Реклама сейчас недоступна — попробуй немного позже.');
+      btn.textContent = L.adBtnCount(3 - (state.adWatchesToday || 0));
+      alert(L.adUnavailable);
       return;
     }
   }
 
   btn.disabled = true;
-  btn.textContent = '⏳ Загрузка рекламы...';
+  btn.textContent = L.adLoading2;
 
   try {
     await withTimeout(function() { return onclickaShowAd(); }, 15000);
@@ -339,11 +340,11 @@ async function watchAdForExtraQuestion() {
     showQuestion();
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = '📺 Посмотреть рекламу и ответить сейчас (' + (3 - (state.adWatchesToday || 0)) + ' из 3 сегодня)';
+    btn.textContent = L.adBtnCount(3 - (state.adWatchesToday || 0));
     if (e.message === 'timeout') {
-      alert('Реклама сейчас недоступна — попробуй немного позже. Это нормально для нового приложения, скоро должно появиться больше объявлений.');
+      alert(L.adUnavailableNew);
     } else {
-      alert('Не удалось загрузить рекламу. Попробуй чуть позже.');
+      alert(L.adFailed);
     }
   }
 }
@@ -449,6 +450,20 @@ const I18N = {
     waitingLabel: 'часов до следующего вопроса',
     streakSuffix: 'подряд',
     watchAd: '📺 Посмотреть рекламу и ответить сейчас',
+    adLoading: '⏳ Реклама загружается...',
+    adLoading2: '⏳ Загрузка рекламы...',
+    adBtnCount: (n) => '📺 Посмотреть рекламу и ответить сейчас (' + n + ' из 3 сегодня)',
+    adUnavailable: 'Реклама сейчас недоступна — попробуй немного позже.',
+    adUnavailableNew: 'Реклама сейчас недоступна — попробуй немного позже. Это нормально для нового приложения, скоро должно появиться больше объявлений.',
+    adFailed: 'Не удалось загрузить рекламу. Попробуй чуть позже.',
+    insightFail: 'Не получилось получить инсайт прямо сейчас. Это не твоя вина — попробуй ещё раз, обычно срабатывает.',
+    thinking: '⏳ Думаю...',
+    insightRetryFail: 'Снова не получилось. Попробуй чуть позже.',
+    insightRetryBtn: '🔄 Получить инсайт для этого ответа',
+    payOnlyTg: 'Оплата доступна только внутри Telegram.',
+    payOpenFail: 'Не удалось открыть оплату. Попробуй позже.',
+    payInvoiceFail: 'Не удалось создать счёт. Попробуй позже.',
+    payError: 'Ошибка оплаты. Попробуй позже.',
     day: 'День',
     dayWord: 'день',
     daysWord: 'дней',
@@ -494,6 +509,20 @@ const I18N = {
     waitingLabel: 'hours until the next question',
     streakSuffix: 'in a row',
     watchAd: '📺 Watch an ad and answer now',
+    adLoading: '⏳ Loading ad...',
+    adLoading2: '⏳ Loading ad...',
+    adBtnCount: (n) => '📺 Watch an ad and answer now (' + n + ' of 3 today)',
+    adUnavailable: 'No ad available right now — try again a little later.',
+    adUnavailableNew: 'No ad available right now — try again a little later. This is normal for a new app; more ads should appear soon.',
+    adFailed: 'Couldn\'t load the ad. Try again a bit later.',
+    insightFail: 'Couldn\'t get an insight right now. It\'s not your fault — try again, it usually works.',
+    thinking: '⏳ Thinking...',
+    insightRetryFail: 'Didn\'t work again. Try a little later.',
+    insightRetryBtn: '🔄 Get insight for this answer',
+    payOnlyTg: 'Payment is available only inside Telegram.',
+    payOpenFail: 'Couldn\'t open payment. Try again later.',
+    payInvoiceFail: 'Couldn\'t create the invoice. Try again later.',
+    payError: 'Payment error. Try again later.',
     day: 'Day',
     dayWord: 'day',
     daysWord: 'days',
@@ -773,6 +802,7 @@ function refreshDynamicTexts() {
   if (wds.length === 7) wds.forEach(function(el, i){ el.textContent = I18N[lang].wd[i]; });
 }
 function pluralAnswers(n) {
+  if ((state.lang || detectLang()) === 'en') return n === 1 ? 'answer' : 'answers';
   if (n%10===1 && n%100!==11) return 'ответ';
   if ([2,3,4].includes(n%10) && ![12,13,14].includes(n%100)) return 'ответа';
   return 'ответов';
@@ -794,7 +824,9 @@ function showQuestion(skipPaywallCheck) {
     const hoursLeft = Math.ceil(24 - hoursSinceLast);
     showScreen('screen-waiting');
     document.getElementById('waiting-hours').textContent = hoursLeft;
-    document.getElementById('waiting-label').textContent = pluralHours(hoursLeft) + ' до следующего вопроса';
+    document.getElementById('waiting-label').textContent = (state.lang || detectLang()) === 'en'
+      ? (pluralHours(hoursLeft) + ' until the next question')
+      : (pluralHours(hoursLeft) + ' до следующего вопроса');
     document.getElementById('waiting-streak').textContent = state.streak + ' ' + pluralDays(state.streak);
 
     const adBtn = document.getElementById('watch-ad-btn');
@@ -802,7 +834,7 @@ function showQuestion(skipPaywallCheck) {
     if (state.day >= 2 && watchesLeft > 0) {
       adBtn.style.display = 'block';
       adBtn.disabled = false;
-      adBtn.textContent = '📺 Посмотреть рекламу и ответить сейчас (' + watchesLeft + ' из 3 сегодня)';
+      adBtn.textContent = I18N[state.lang || detectLang()].adBtnCount(watchesLeft);
     } else {
       adBtn.style.display = 'none';
     }
@@ -825,6 +857,7 @@ function dismissPaywall() {
 }
 
 function pluralHours(n) {
+  if ((state.lang || detectLang()) === 'en') return n === 1 ? 'hour' : 'hours';
   if (n%10===1 && n%100!==11) return 'час';
   if ([2,3,4].includes(n%10) && ![12,13,14].includes(n%100)) return 'часа';
   return 'часов';
@@ -951,7 +984,7 @@ async function runInsightAttempt() {
     pendingAnswer = null;
 
   } catch(e) {
-    body.textContent = 'Не получилось получить инсайт прямо сейчас. Это не твоя вина — попробуй ещё раз, обычно срабатывает.';
+    body.textContent = I18N[state.lang || detectLang()].insightFail;
     retryWrap.style.display = 'block';
   } finally {
     isRequestInFlight = false;
@@ -1095,7 +1128,7 @@ async function retryHistoryItem(idx, btn) {
   const item = state.history[idx];
   if (!item) return;
   isRequestInFlight = true;
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Думаю...'; }
+  if (btn) { btn.disabled = true; btn.textContent = I18N[state.lang || detectLang()].thinking; }
   try {
     const parsed = await getInsight(item.q, item.a);
     state.history[idx].insight = parsed.insight;
@@ -1105,8 +1138,8 @@ async function retryHistoryItem(idx, btn) {
     save();
     if (selectedDayKey) { selectCalDay(selectedDayKey); } else { showPortrait(); }
   } catch(e) {
-    alert('Снова не получилось. Попробуй чуть позже.');
-    if (btn) { btn.disabled = false; btn.textContent = '🔄 Получить инсайт для этого ответа'; }
+    alert(I18N[state.lang || detectLang()].insightRetryFail);
+    if (btn) { btn.disabled = false; btn.textContent = I18N[state.lang || detectLang()].insightRetryBtn; }
   } finally {
     isRequestInFlight = false;
   }
@@ -1140,7 +1173,7 @@ async function pay() {
   try {
     const initData = (tg && tg.initData) ? tg.initData : '';
     if (!initData || !tg.openInvoice) {
-      alert('Оплата доступна только внутри Telegram.');
+      alert(I18N[state.lang || detectLang()].payOnlyTg);
       return;
     }
 
@@ -1149,9 +1182,9 @@ async function pay() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initData: initData })
     });
-    if (!res.ok) { alert('Не удалось открыть оплату. Попробуй позже.'); return; }
+    if (!res.ok) { alert(I18N[state.lang || detectLang()].payOpenFail); return; }
     const data = await res.json();
-    if (!data.invoiceLink) { alert('Не удалось создать счёт. Попробуй позже.'); return; }
+    if (!data.invoiceLink) { alert(I18N[state.lang || detectLang()].payInvoiceFail); return; }
 
     tg.openInvoice(data.invoiceLink, function(status) {
       if (status === 'paid') {
@@ -1165,7 +1198,7 @@ async function pay() {
       // status может быть 'cancelled' / 'failed' — тогда ничего не делаем
     });
   } catch (e) {
-    alert('Ошибка оплаты. Попробуй позже.');
+    alert(I18N[state.lang || detectLang()].payError);
   }
 }
 
