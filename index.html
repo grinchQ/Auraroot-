@@ -1202,6 +1202,16 @@ async function pay() {
   }
 }
 
+// Тап по любому месту вне поля ввода скрывает клавиатуру
+document.addEventListener('pointerdown', function(e) {
+  const input = document.getElementById('answer-input');
+  if (!input) return;
+  // Если клик не по самому полю — снимаем фокус, клавиатура прячется
+  if (e.target !== input) {
+    input.blur();
+  }
+}, true);
+
 loadState(function() {
   if (!state.lang) { state.lang = detectLang(); save(); }
   applyI18n();
