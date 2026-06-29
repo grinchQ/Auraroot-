@@ -679,6 +679,7 @@ async function getInsight(question, answer) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          initData: (tg && tg.initData) ? tg.initData : '',
           model: 'deepseek-v4-flash',
           max_tokens: 600,
           messages: [
