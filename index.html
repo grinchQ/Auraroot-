@@ -151,71 +151,74 @@
 <!-- WELCOME -->
 <div class="screen active" id="screen-welcome">
   <div class="mirror-anim">🪞</div>
-  <div class="welcome-title">Зеркало</div>
-  <div class="welcome-sub">Один вопрос в день. Честный ответ. Портрет себя, который растёт годами.</div>
-  <button class="btn-primary" onclick="showQuestion()">Начать — это бесплатно</button>
-  <div class="welcome-note">7 дней бесплатно · Без регистрации</div>
+  <div class="welcome-title" data-i18n="welcomeTitle">Зеркало</div>
+  <div class="welcome-sub" data-i18n="welcomeSub">Один вопрос в день. Честный ответ. Портрет себя, который растёт годами.</div>
+  <button class="btn-primary" data-i18n="welcomeStart" onclick="showQuestion()">Начать — это бесплатно</button>
+  <div class="welcome-note" data-i18n="welcomeNote">7 дней бесплатно · Без регистрации</div>
 </div>
 
 <!-- QUESTION -->
 <div class="screen" id="screen-question">
   <div class="top-bar">
     <div class="day-chip" id="day-chip">День 1</div>
-    <div class="streak-chip" id="streak-chip">🔥 1 день</div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="streak-chip" id="streak-chip">🔥 1 день</div>
+      <button id="lang-btn" onclick="toggleLang()" style="background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:6px 10px; font-size:12px; color:var(--text2); cursor:pointer;">EN</button>
+    </div>
   </div>
   <div class="dots" id="dots-row"></div>
   <div class="q-card">
-    <div class="q-eyebrow">Вопрос дня</div>
+    <div class="q-eyebrow" data-i18n="qEyebrow">Вопрос дня</div>
     <div class="q-text" id="q-text"></div>
   </div>
-  <textarea id="answer-input" placeholder="Напиши всё, что приходит в голову. Здесь нет правильных ответов..." oninput="onInput()"></textarea>
-  <div class="char-count"><span id="char-count">0</span> символов</div>
-  <button class="btn-send" id="btn-send" onclick="submitAnswer()" disabled>Получить инсайт ↗</button>
+  <textarea id="answer-input" data-i18n-ph="answerPlaceholder" placeholder="Напиши всё, что приходит в голову. Здесь нет правильных ответов..." oninput="onInput()"></textarea>
+  <div class="char-count"><span id="char-count">0</span> <span data-i18n="charsLabel">символов</span></div>
+  <button class="btn-send" id="btn-send" data-i18n="submit" onclick="submitAnswer()" disabled>Получить инсайт ↗</button>
 </div>
 
 <!-- INSIGHT -->
 <div class="screen" id="screen-insight">
   <div class="insight-header">
     <div class="insight-icon">✦</div>
-    <div class="insight-title">Твой инсайт</div>
+    <div class="insight-title" data-i18n="insightTitle">Твой инсайт</div>
   </div>
   <div class="q-echo">
-    <div class="q-echo-label">Твой ответ</div>
+    <div class="q-echo-label" data-i18n="yourAnswer">Твой ответ</div>
     <div class="q-echo-text" id="echo-answer"></div>
   </div>
   <div class="insight-card">
-    <div class="insight-label">Что я вижу</div>
+    <div class="insight-label" data-i18n="insightLabel">Что я вижу</div>
     <div class="insight-body" id="insight-body"></div>
     <div class="traits-wrap" id="traits-wrap"></div>
   </div>
   <div id="retry-wrap" style="display:none; margin-bottom:10px;">
-    <button class="btn-primary" id="retry-btn" style="max-width:none;" onclick="runInsightAttempt()">🔄 Попробовать ещё раз</button>
+    <button class="btn-primary" id="retry-btn" style="max-width:none;" data-i18n="retry" onclick="runInsightAttempt()">🔄 Попробовать ещё раз</button>
   </div>
-  <button class="btn-next" onclick="nextQuestion()">Следующий вопрос →</button>
-  <button class="btn-portrait" onclick="showPortrait()">Мой портрет 🪞</button>
+  <button class="btn-next" data-i18n="nextQuestion" onclick="nextQuestion()">Следующий вопрос →</button>
+  <button class="btn-portrait" data-i18n="myPortrait" onclick="showPortrait()">Мой портрет 🪞</button>
 </div>
 
 <!-- PORTRAIT -->
 <div class="screen" id="screen-portrait">
   <div class="portrait-topbar">
     <button class="portrait-topbar-btn" onclick="showQuestion()" aria-label="Назад">←</button>
-    <div class="portrait-topbar-title">Твой портрет</div>
+    <div class="portrait-topbar-title" data-i18n="portraitTitle">Твой портрет</div>
   </div>
   <div class="portrait-header">
     <div class="portrait-avatar">🪞</div>
     <div class="portrait-sub" id="portrait-sub"></div>
   </div>
   <div class="pstats">
-    <div class="pstat"><div class="pstat-val" id="ps-answers">0</div><div class="pstat-lbl">ответов</div></div>
-    <div class="pstat"><div class="pstat-val" id="ps-traits">0</div><div class="pstat-lbl">черт</div></div>
-    <div class="pstat"><div class="pstat-val" id="ps-days">1</div><div class="pstat-lbl">дней</div></div>
+    <div class="pstat"><div class="pstat-val" id="ps-answers">0</div><div class="pstat-lbl" data-i18n="psAnswers">ответов</div></div>
+    <div class="pstat"><div class="pstat-val" id="ps-traits">0</div><div class="pstat-lbl" data-i18n="psTraits">черт</div></div>
+    <div class="pstat"><div class="pstat-val" id="ps-days">1</div><div class="pstat-lbl" data-i18n="psDays">дней</div></div>
   </div>
-  <div class="section-label">Карта личности</div>
+  <div class="section-label" data-i18n="mapLabel">Карта личности</div>
   <div class="trait-bars" id="trait-bars"></div>
-  <div class="section-label" style="margin-top:20px;">Твои черты</div>
+  <div class="section-label" data-i18n="traitsLabel" style="margin-top:20px;">Твои черты</div>
   <div class="all-tags" id="all-tags"></div>
 
-  <div class="section-label">История по дням</div>
+  <div class="section-label" data-i18n="historyLabel">История по дням</div>
   <div class="cal-month-nav">
     <button class="cal-nav-btn" id="cal-prev" onclick="calShiftMonth(-1)">‹</button>
     <div class="cal-month-label" id="cal-month-label">—</div>
@@ -233,32 +236,32 @@
 <!-- PAYWALL -->
 <div class="screen" id="screen-paywall">
   <div class="paywall-icon">🔓</div>
-  <div class="paywall-title">Открой полный портрет</div>
-  <div class="paywall-sub">7 дней позади. Твой портрет ждёт раскрытия.</div>
+  <div class="paywall-title" data-i18n="paywallTitle">Открой полный портрет</div>
+  <div class="paywall-sub" data-i18n="paywallSub">7 дней позади. Твой портрет ждёт раскрытия.</div>
   <div class="paywall-perks">
-    <div class="perk"><div class="perk-icon">📊</div><div>Полная карта личности с 20+ чертами</div></div>
-    <div class="perk"><div class="perk-icon">📅</div><div>Все ответы и инсайты навсегда</div></div>
-    <div class="perk"><div class="perk-icon">🔄</div><div>Сравнение «я сейчас» и «я через год»</div></div>
-    <div class="perk"><div class="perk-icon">∞</div><div>Безлимитные вопросы навсегда</div></div>
+    <div class="perk"><div class="perk-icon">📊</div><div data-i18n="perk1">Полная карта личности с 20+ чертами</div></div>
+    <div class="perk"><div class="perk-icon">📅</div><div data-i18n="perk2">Все ответы и инсайты навсегда</div></div>
+    <div class="perk"><div class="perk-icon">🔄</div><div data-i18n="perk3">Сравнение «я сейчас» и «я через год»</div></div>
+    <div class="perk"><div class="perk-icon">∞</div><div data-i18n="perk4">Безлимитные вопросы навсегда</div></div>
   </div>
-  <div class="price-badge">299 ₽</div>
-  <div class="price-note">Один раз — навсегда</div>
-  <button class="btn-primary" onclick="pay()">Получить полный портрет</button>
-  <button class="btn-back" style="margin-top:12px;max-width:340px;" onclick="showPortrait()">Посмотреть мой портрет</button>
-  <button class="btn-back" style="margin-top:10px;max-width:340px;background:transparent;border:none;color:var(--text3);" onclick="dismissPaywall()">Позже</button>
+  <div class="price-badge" data-i18n="price">299 ₽</div>
+  <div class="price-note" data-i18n="priceNote">Один раз — навсегда</div>
+  <button class="btn-primary" data-i18n="payBtn" onclick="pay()">Получить полный портрет</button>
+  <button class="btn-back" style="margin-top:12px;max-width:340px;" data-i18n="viewPortrait" onclick="showPortrait()">Посмотреть мой портрет</button>
+  <button class="btn-back" style="margin-top:10px;max-width:340px;background:transparent;border:none;color:var(--text3);" data-i18n="later" onclick="dismissPaywall()">Позже</button>
 </div>
 
 <!-- WAITING -->
 <div class="screen" id="screen-waiting">
   <div class="waiting-icon">⏳</div>
-  <div class="paywall-title">Вопрос дня отвечен</div>
-  <div class="paywall-sub">Возвращайся за новым — портрет растёт каждый день.</div>
+  <div class="paywall-title" data-i18n="waitingTitle">Вопрос дня отвечен</div>
+  <div class="paywall-sub" data-i18n="waitingSub">Возвращайся за новым — портрет растёт каждый день.</div>
   <div class="waiting-card">
     <div class="waiting-countdown" id="waiting-hours">24</div>
-    <div class="waiting-countdown-label" id="waiting-label">часов до следующего вопроса</div>
+    <div class="waiting-countdown-label" id="waiting-label" data-i18n="waitingLabel">часов до следующего вопроса</div>
   </div>
-  <div class="streak-banner">🔥 <span id="waiting-streak">1 день</span> подряд</div>
-  <button class="btn-primary" id="watch-ad-btn" style="display:none; background:var(--bg2); color:var(--accent); border:1px solid rgba(78,203,141,0.3);" onclick="watchAdForExtraQuestion()">📺 Посмотреть рекламу и ответить сейчас</button>
+  <div class="streak-banner">🔥 <span id="waiting-streak">1 день</span> <span data-i18n="streakSuffix">подряд</span></div>
+  <button class="btn-primary" id="watch-ad-btn" style="display:none; background:var(--bg2); color:var(--accent); border:1px solid rgba(78,203,141,0.3);" data-i18n="watchAd" onclick="watchAdForExtraQuestion()">📺 Посмотреть рекламу и ответить сейчас</button>
   <button class="btn-primary" onclick="showPortrait()">Посмотреть мой портрет</button>
 </div>
 
@@ -408,40 +411,136 @@ function detectLang() {
 // Тексты интерфейса на двух языках
 const I18N = {
   ru: {
+    appTitle: 'Зеркало',
     welcomeTitle: 'Зеркало',
-    answerPlaceholder: 'Напиши свой ответ...',
-    submit: 'Получить инсайт',
-    portrait: 'Мой портрет',
-    paywallTitle: 'Полный портрет',
-    paywallText: '7 дней позади. Открой полный доступ навсегда.',
-    pay: 'Получить полный портрет — 299 ₽',
+    welcomeSub: 'Один вопрос в день. Честный ответ. Портрет себя, который растёт годами.',
+    welcomeStart: 'Начать — это бесплатно',
+    welcomeNote: '7 дней бесплатно · Без регистрации',
+    qEyebrow: 'Вопрос дня',
+    answerPlaceholder: 'Напиши всё, что приходит в голову. Здесь нет правильных ответов...',
+    charsLabel: 'символов',
+    submit: 'Получить инсайт ↗',
     insightTitle: 'Твой инсайт',
-    streak: 'дней подряд',
-    waitTitle: 'Возвращайся завтра',
-    waitText: 'Следующий вопрос откроется через',
-    langName: 'Русский',
-    nextQuestion: 'Следующий вопрос'
+    yourAnswer: 'Твой ответ',
+    insightLabel: 'Что я вижу',
+    retry: '🔄 Попробовать ещё раз',
+    nextQuestion: 'Следующий вопрос →',
+    myPortrait: 'Мой портрет 🪞',
+    portraitTitle: 'Твой портрет',
+    psAnswers: 'ответов',
+    psTraits: 'черт',
+    psDays: 'дней',
+    mapLabel: 'Карта личности',
+    traitsLabel: 'Твои черты',
+    historyLabel: 'История по дням',
+    paywallTitle: 'Открой полный портрет',
+    paywallSub: '7 дней позади. Твой портрет ждёт раскрытия.',
+    perk1: 'Полная карта личности с 20+ чертами',
+    perk2: 'Все ответы и инсайты навсегда',
+    perk3: 'Сравнение «я сейчас» и «я через год»',
+    perk4: 'Безлимитные вопросы навсегда',
+    price: '299 ₽',
+    priceNote: 'Один раз — навсегда',
+    payBtn: 'Получить полный портрет',
+    viewPortrait: 'Посмотреть мой портрет',
+    later: 'Позже',
+    waitingTitle: 'Вопрос дня отвечен',
+    waitingSub: 'Возвращайся за новым — портрет растёт каждый день.',
+    waitingLabel: 'часов до следующего вопроса',
+    streakSuffix: 'подряд',
+    watchAd: '📺 Посмотреть рекламу и ответить сейчас',
+    day: 'День',
+    dayWord: 'день',
+    daysWord: 'дней',
+    wd: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
+    langName: 'Русский'
   },
   en: {
+    appTitle: 'Mirror',
     welcomeTitle: 'Mirror',
-    answerPlaceholder: 'Write your answer...',
-    submit: 'Get insight',
-    portrait: 'My portrait',
-    paywallTitle: 'Full portrait',
-    paywallText: 'Your 7 days are up. Unlock full access forever.',
-    pay: 'Unlock full portrait — $3',
+    welcomeSub: 'One question a day. An honest answer. A portrait of yourself that grows over the years.',
+    welcomeStart: 'Start — it\'s free',
+    welcomeNote: '7 days free · No sign-up',
+    qEyebrow: 'Question of the day',
+    answerPlaceholder: 'Write whatever comes to mind. There are no right answers here...',
+    charsLabel: 'characters',
+    submit: 'Get insight ↗',
     insightTitle: 'Your insight',
-    streak: 'day streak',
-    waitTitle: 'Come back tomorrow',
-    waitText: 'Your next question unlocks in',
-    langName: 'English',
-    nextQuestion: 'Next question'
+    yourAnswer: 'Your answer',
+    insightLabel: 'What I see',
+    retry: '🔄 Try again',
+    nextQuestion: 'Next question →',
+    myPortrait: 'My portrait 🪞',
+    portraitTitle: 'Your portrait',
+    psAnswers: 'answers',
+    psTraits: 'traits',
+    psDays: 'days',
+    mapLabel: 'Personality map',
+    traitsLabel: 'Your traits',
+    historyLabel: 'History by day',
+    paywallTitle: 'Unlock your full portrait',
+    paywallSub: 'Your 7 days are up. Your portrait is ready to unfold.',
+    perk1: 'Full personality map with 20+ traits',
+    perk2: 'All answers and insights forever',
+    perk3: 'Compare "me now" and "me a year from now"',
+    perk4: 'Unlimited questions forever',
+    price: '$3',
+    priceNote: 'One time — forever',
+    payBtn: 'Unlock full portrait',
+    viewPortrait: 'View my portrait',
+    later: 'Later',
+    waitingTitle: 'Today\'s question answered',
+    waitingSub: 'Come back for a new one — your portrait grows every day.',
+    waitingLabel: 'hours until the next question',
+    streakSuffix: 'in a row',
+    watchAd: '📺 Watch an ad and answer now',
+    day: 'Day',
+    dayWord: 'day',
+    daysWord: 'days',
+    wd: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    langName: 'English'
   }
 };
 
 function t(key) {
   const lang = (state && state.lang) ? state.lang : detectLang();
   return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+}
+
+// Проставляет все надписи интерфейса по текущему языку
+function applyI18n() {
+  const lang = (state && state.lang) ? state.lang : detectLang();
+  document.documentElement.lang = lang;
+  // Тексты
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    const key = el.getAttribute('data-i18n');
+    if (I18N[lang] && I18N[lang][key] != null) el.textContent = I18N[lang][key];
+  });
+  // Плейсхолдеры
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el) {
+    const key = el.getAttribute('data-i18n-ph');
+    if (I18N[lang] && I18N[lang][key] != null) el.placeholder = I18N[lang][key];
+  });
+  // Кнопка-переключатель показывает язык, на который переключит
+  const lb = document.getElementById('lang-btn');
+  if (lb) lb.textContent = lang === 'ru' ? 'EN' : 'RU';
+  if (typeof refreshDynamicTexts === 'function') refreshDynamicTexts();
+}
+
+// Переключение языка вручную
+function setLang(lang) {
+  state.lang = lang;
+  save();
+  applyI18n();
+  // Обновляем динамические надписи, которые ставятся из JS
+  if (typeof refreshDynamicTexts === 'function') refreshDynamicTexts();
+  // Перерисовываем текущий вопрос на новом языке
+  var qEl = document.getElementById('q-text');
+  if (qEl) qEl.textContent = QUESTIONS[state.currentQ % QUESTIONS.length][lang];
+}
+
+function toggleLang() {
+  setLang((state.lang === 'ru') ? 'en' : 'ru');
 }
 
 // ── БАНК ВОПРОСОВ (двуязычный) ──────────────────────────────────────────────
@@ -644,9 +743,22 @@ function showScreen(id) {
 }
 
 function pluralDays(n) {
+  if ((state.lang || detectLang()) === 'en') return n === 1 ? 'day' : 'days';
   if (n%10===1 && n%100!==11) return 'день';
   if ([2,3,4].includes(n%10) && ![12,13,14].includes(n%100)) return 'дня';
   return 'дней';
+}
+
+// Обновляет надписи, формируемые из JS (день, стрик, дни недели в календаре)
+function refreshDynamicTexts() {
+  const lang = (state.lang || detectLang());
+  const dc = document.getElementById('day-chip');
+  if (dc) dc.textContent = (I18N[lang].day) + ' ' + state.day;
+  const sc = document.getElementById('streak-chip');
+  if (sc) sc.textContent = '🔥 ' + state.streak + ' ' + pluralDays(state.streak);
+  // Дни недели в календаре
+  const wds = document.querySelectorAll('.cal-weekday');
+  if (wds.length === 7) wds.forEach(function(el, i){ el.textContent = I18N[lang].wd[i]; });
 }
 function pluralAnswers(n) {
   if (n%10===1 && n%100!==11) return 'ответ';
@@ -686,7 +798,7 @@ function showQuestion(skipPaywallCheck) {
   }
 
   document.getElementById('q-text').textContent = QUESTIONS[state.currentQ % QUESTIONS.length][state.lang || detectLang()];
-  document.getElementById('day-chip').textContent = 'День ' + state.day;
+  document.getElementById('day-chip').textContent = I18N[state.lang || detectLang()].day + ' ' + state.day;
   document.getElementById('streak-chip').textContent = '🔥 ' + state.streak + ' ' + pluralDays(state.streak);
   document.getElementById('answer-input').value = '';
   document.getElementById('char-count').textContent = '0';
@@ -1043,6 +1155,7 @@ async function pay() {
 
 loadState(function() {
   if (!state.lang) { state.lang = detectLang(); save(); }
+  applyI18n();
   ensureUserInDb();
   syncPaidStatus().then(function() {
     if (state.history && state.history.length > 0) {
