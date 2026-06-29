@@ -541,6 +541,11 @@ function setLang(lang) {
 
 function toggleLang() {
   setLang((state.lang === 'ru') ? 'en' : 'ru');
+  // Если открыт портрет — перерисовать бары и календарь на новом языке
+  var portraitScreen = document.getElementById('screen-portrait');
+  if (portraitScreen && portraitScreen.classList.contains('active')) {
+    if (typeof showPortrait === 'function') showPortrait();
+  }
 }
 
 // ── БАНК ВОПРОСОВ (двуязычный) ──────────────────────────────────────────────
@@ -675,7 +680,14 @@ const QUESTIONS = [
 ];
 
 
-const TRAIT_NAMES = ['Самопознание','Эмпатия','Рефлексия','Открытость','Перфекционизм'];
+const TRAIT_NAMES_I18N = {
+  ru: ['Самопознание','Эмпатия','Рефлексия','Открытость','Перфекционизм'],
+  en: ['Self-awareness','Empathy','Reflection','Openness','Perfectionism']
+};
+function getTraitNames() {
+  return TRAIT_NAMES_I18N[(state.lang || detectLang())] || TRAIT_NAMES_I18N.en;
+}
+const TRAIT_NAMES = TRAIT_NAMES_I18N.ru; // совместимость со старым кодом
 const TRAIT_COLORS = ['#4ecb8d','#a78bfa','#4ecb8d','#a78bfa','#f87171'];
 
 let state = {
@@ -969,7 +981,7 @@ function showPortrait() {
     71
   ];
   const bars = document.getElementById('trait-bars');
-  bars.innerHTML = TRAIT_NAMES.map(function(name, i) {
+  bars.innerHTML = getTraitNames().map(function(name, i) {
     return '<div class="bar-row"><div class="bar-meta"><span class="bar-name">' + name + '</span><span class="bar-pct">' + scores[i] + '</span></div><div class="bar-bg"><div class="bar-fill" style="width:0%;background:' + TRAIT_COLORS[i] + '" data-w="' + scores[i] + '%"></div></div></div>';
   }).join('');
   setTimeout(function() {
@@ -997,7 +1009,11 @@ function showPortrait() {
   showScreen('screen-portrait');
 }
 
-const MONTH_NAMES = ['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'];
+const MONTH_NAMES_I18N = {
+  ru: ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],
+  en: ['January','February','March','April','May','June','July','August','September','October','November','December']
+};
+const MONTH_NAMES = MONTH_NAMES_I18N.ru; // совместимость
 let calViewYear = null;
 let calViewMonth = null;
 let selectedDayKey = null;
@@ -1024,7 +1040,7 @@ function renderCalendar() {
     byDay[k].push(idx);
   });
 
-  document.getElementById('cal-month-label').textContent = MONTH_NAMES[calViewMonth] + ' ' + calViewYear;
+  document.getElementById('cal-month-label').textContent = MONTH_NAMES_I18N[(state.lang || detectLang())][calViewMonth] + ' ' + calViewYear;
 
   const firstOfMonth = new Date(calViewYear, calViewMonth, 1);
   const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
