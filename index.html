@@ -390,133 +390,191 @@ async function logAnswerToDb() {
   });
 }
 
+// ── ЯЗЫК ────────────────────────────────────────────────────────────────────
+// Определяем язык по Telegram language_code. Языки СНГ → русский, остальные → английский.
+// Пользователь может переключить вручную (см. setLang), выбор хранится в state.lang.
+const RU_LANGS = ['ru', 'uk', 'be', 'kk', 'ky', 'hy', 'az', 'uz', 'tg', 'tk', 'mo'];
+
+function detectLang() {
+  try {
+    const code = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code) || '';
+    const base = code.split('-')[0].toLowerCase();
+    return RU_LANGS.indexOf(base) !== -1 ? 'ru' : 'en';
+  } catch (e) {
+    return 'en';
+  }
+}
+
+// Тексты интерфейса на двух языках
+const I18N = {
+  ru: {
+    welcomeTitle: 'Зеркало',
+    answerPlaceholder: 'Напиши свой ответ...',
+    submit: 'Получить инсайт',
+    portrait: 'Мой портрет',
+    paywallTitle: 'Полный портрет',
+    paywallText: '7 дней позади. Открой полный доступ навсегда.',
+    pay: 'Получить полный портрет — 299 ₽',
+    insightTitle: 'Твой инсайт',
+    streak: 'дней подряд',
+    waitTitle: 'Возвращайся завтра',
+    waitText: 'Следующий вопрос откроется через',
+    langName: 'Русский',
+    nextQuestion: 'Следующий вопрос'
+  },
+  en: {
+    welcomeTitle: 'Mirror',
+    answerPlaceholder: 'Write your answer...',
+    submit: 'Get insight',
+    portrait: 'My portrait',
+    paywallTitle: 'Full portrait',
+    paywallText: 'Your 7 days are up. Unlock full access forever.',
+    pay: 'Unlock full portrait — $3',
+    insightTitle: 'Your insight',
+    streak: 'day streak',
+    waitTitle: 'Come back tomorrow',
+    waitText: 'Your next question unlocks in',
+    langName: 'English',
+    nextQuestion: 'Next question'
+  }
+};
+
+function t(key) {
+  const lang = (state && state.lang) ? state.lang : detectLang();
+  return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+}
+
+// ── БАНК ВОПРОСОВ (двуязычный) ──────────────────────────────────────────────
+// Каждый вопрос — объект { ru, en }. Английские версии написаны как родные,
+// передают смысл и эмоцию русского оригинала, а не дословный перевод.
 const QUESTIONS = [
-  // Детство и истоки
-  "Если бы тебе нужно было объяснить своё детство одним запахом или звуком — что бы это было?",
-  "Какое самое яркое воспоминание из детства всплывает первым? Почему именно оно?",
-  "Был ли в детстве человек, который верил в тебя больше, чем ты сам? Кто это был?",
-  "Какую фразу родители говорили тебе чаще всего? Как она на тебя повлияла?",
-  "Чего тебе не хватало в детстве, и как ты пытаешься это компенсировать сейчас?",
-  "Каким ребёнком ты был — тихим наблюдателем или тем, кто всегда в центре внимания?",
-  "Если бы ты мог сказать что-то своему десятилетнему себе — что бы это было?",
-  "Какая детская мечта до сих пор живёт внутри тебя, даже если ты в этом не признаёшься?",
-  "Был ли момент в детстве, когда ты впервые почувствовал себя одиноким? Что произошло?",
-  "Что из детства ты поклялся себе никогда не повторять во взрослой жизни?",
+  // Детство и истоки / Childhood & origins
+  { ru: "Если бы тебе нужно было объяснить своё детство одним запахом или звуком — что бы это было?", en: "If you had to capture your childhood in a single smell or sound, what would it be?" },
+  { ru: "Какое самое яркое воспоминание из детства всплывает первым? Почему именно оно?", en: "What's the first vivid memory from childhood that surfaces — and why that one?" },
+  { ru: "Был ли в детстве человек, который верил в тебя больше, чем ты сам? Кто это был?", en: "As a child, was there someone who believed in you more than you believed in yourself? Who?" },
+  { ru: "Какую фразу родители говорили тебе чаще всего? Как она на тебя повлияла?", en: "What phrase did your parents say to you most often? How did it shape you?" },
+  { ru: "Чего тебе не хватало в детстве, и как ты пытаешься это компенсировать сейчас?", en: "What did you lack as a child, and how do you try to make up for it now?" },
+  { ru: "Каким ребёнком ты был — тихим наблюдателем или тем, кто всегда в центре внимания?", en: "What kind of child were you — the quiet observer or the one always at the center?" },
+  { ru: "Если бы ты мог сказать что-то своему десятилетнему себе — что бы это было?", en: "If you could tell your ten-year-old self one thing, what would it be?" },
+  { ru: "Какая детская мечта до сих пор живёт внутри тебя, даже если ты в этом не признаёшься?", en: "What childhood dream still lives inside you, even if you won't admit it?" },
+  { ru: "Был ли момент в детстве, когда ты впервые почувствовал себя одиноким? Что произошло?", en: "Was there a moment in childhood when you first felt truly alone? What happened?" },
+  { ru: "Что из детства ты поклялся себе никогда не повторять во взрослой жизни?", en: "What did you swear, as a child, never to repeat in your adult life?" },
 
-  // Настоящий момент и жизненная сила
-  "Вспомни момент, когда ты чувствовал себя по-настоящему живым. Где ты был и что происходило вокруг?",
-  "Когда ты в последний раз делал что-то впервые? Как это ощущалось?",
-  "Что заставляет тебя терять чувство времени, когда ты этим занят?",
-  "Если бы у тебя был один свободный день без обязательств — на что бы ты его потратил?",
-  "В какой момент ты последний раз чувствовал гордость за себя?",
-  "Какое простое действие в обычный день приносит тебе больше всего удовольствия?",
-  "Когда ты последний раз чувствовал себя по-настоящему собой, без масок?",
-  "Что в твоей жизни сейчас даётся легко, хотя раньше казалось невозможным?",
-  "Есть ли момент в последний месяц, когда ты удивил сам себя?",
-  "Какая мелочь способна испортить тебе целый день, а какая — спасти его?",
+  // Настоящий момент и жизненная сила / The present & aliveness
+  { ru: "Вспомни момент, когда ты чувствовал себя по-настоящему живым. Где ты был и что происходило вокруг?", en: "Recall a moment when you felt truly alive. Where were you, and what was happening around you?" },
+  { ru: "Когда ты в последний раз делал что-то впервые? Как это ощущалось?", en: "When did you last do something for the very first time? How did it feel?" },
+  { ru: "Что заставляет тебя терять чувство времени, когда ты этим занят?", en: "What makes you lose all sense of time when you're doing it?" },
+  { ru: "Если бы у тебя был один свободный день без обязательств — на что бы ты его потратил?", en: "If you had one free day with zero obligations, how would you spend it?" },
+  { ru: "В какой момент ты последний раз чувствовал гордость за себя?", en: "When did you last feel genuinely proud of yourself?" },
+  { ru: "Какое простое действие в обычный день приносит тебе больше всего удовольствия?", en: "What small, ordinary thing brings you the most quiet pleasure in a day?" },
+  { ru: "Когда ты последний раз чувствовал себя по-настоящему собой, без масок?", en: "When did you last feel completely yourself, with no masks on?" },
+  { ru: "Что в твоей жизни сейчас даётся легко, хотя раньше казалось невозможным?", en: "What comes easily to you now that once felt impossible?" },
+  { ru: "Есть ли момент в последний месяц, когда ты удивил сам себя?", en: "In the past month, was there a moment when you surprised yourself?" },
+  { ru: "Какая мелочь способна испортить тебе целый день, а какая — спасти его?", en: "What small thing can ruin your whole day — and what can rescue it?" },
 
-  // Решения и сомнения
-  "Какое решение ты до сих пор не можешь принять? Почему оно такое тяжёлое?",
-  "Если бы ты мог изменить одно решение из прошлого — какое и почему?",
-  "Есть ли что-то, от чего ты давно хочешь отказаться, но не можешь?",
-  "Какое самое смелое решение ты принимал в жизни? Что тебя на него толкнуло?",
-  "О каком несделанном выборе ты чаще всего думаешь по ночам?",
-  "Что тебя обычно останавливает перед важным решением — страх или забота о других?",
-  "Если бы не было риска ошибиться, что бы ты изменил в своей жизни прямо сейчас?",
-  "Какой совет ты даёшь другим, но сам никогда не следуешь ему?",
-  "Бывает, что ты знаешь правильный ответ, но всё равно выбираешь другой путь — почему?",
-  "Какое решение в твоей жизни было самым трудным, но оказалось правильным?",
+  // Решения и сомнения / Decisions & doubt
+  { ru: "Какое решение ты до сих пор не можешь принять? Почему оно такое тяжёлое?", en: "What decision are you still unable to make? Why does it weigh so much?" },
+  { ru: "Если бы ты мог изменить одно решение из прошлого — какое и почему?", en: "If you could change one decision from your past, which one — and why?" },
+  { ru: "Есть ли что-то, от чего ты давно хочешь отказаться, но не можешь?", en: "Is there something you've long wanted to let go of but can't?" },
+  { ru: "Какое самое смелое решение ты принимал в жизни? Что тебя на него толкнуло?", en: "What's the bravest decision you've ever made? What pushed you to it?" },
+  { ru: "О каком несделанном выборе ты чаще всего думаешь по ночам?", en: "Which choice you never made do you think about most at night?" },
+  { ru: "Что тебя обычно останавливает перед важным решением — страх или забота о других?", en: "What usually stops you before a big decision — fear, or concern for others?" },
+  { ru: "Если бы не было риска ошибиться, что бы ты изменил в своей жизни прямо сейчас?", en: "If there were no risk of being wrong, what would you change in your life right now?" },
+  { ru: "Какой совет ты даёшь другим, но сам никогда не следуешь ему?", en: "What advice do you give others but never follow yourself?" },
+  { ru: "Бывает, что ты знаешь правильный ответ, но всё равно выбираешь другой путь — почему?", en: "Sometimes you know the right answer but choose another path anyway — why?" },
+  { ru: "Какое решение в твоей жизни было самым трудным, но оказалось правильным?", en: "What was the hardest decision in your life that turned out to be right?" },
 
-  // Отношения и близость
-  "Кто в твоей жизни видит тебя лучше всего? Что именно они замечают в тебе?",
-  "Если бы твой лучший друг описывал тебя незнакомцу — что бы он сказал первым делом?",
-  "Что тебе сложнее — открываться людям или отпускать их?",
-  "Был ли человек, после расставания с которым ты стал другим? Что изменилось?",
-  "Что ты ищешь в близких людях — поддержку, вызов или просто покой?",
-  "Какую часть себя ты показываешь только самым близким людям?",
-  "Есть ли человек, которому ты так и не сказал что-то важное? Что бы ты сказал сейчас?",
-  "Как ты понимаешь, что человеку можно доверять?",
-  "Что тебя злит в людях больше всего — и не отражение ли это чего-то в тебе самом?",
-  "Кого из своего окружения ты бы назвал своим зеркалом — и почему именно его?",
+  // Отношения и близость / Relationships & closeness
+  { ru: "Кто в твоей жизни видит тебя лучше всего? Что именно они замечают в тебе?", en: "Who in your life sees you most clearly? What exactly do they notice in you?" },
+  { ru: "Если бы твой лучший друг описывал тебя незнакомцу — что бы он сказал первым делом?", en: "If your best friend described you to a stranger, what would they say first?" },
+  { ru: "Что тебе сложнее — открываться людям или отпускать их?", en: "What's harder for you — opening up to people, or letting them go?" },
+  { ru: "Был ли человек, после расставания с которым ты стал другим? Что изменилось?", en: "Was there a person whose leaving changed who you are? What shifted?" },
+  { ru: "Что ты ищешь в близких людях — поддержку, вызов или просто покой?", en: "What do you seek in the people close to you — support, challenge, or simply peace?" },
+  { ru: "Какую часть себя ты показываешь только самым близким людям?", en: "What part of yourself do you reveal only to those closest to you?" },
+  { ru: "Есть ли человек, которому ты так и не сказал что-то важное? Что бы ты сказал сейчас?", en: "Is there someone you never told something important? What would you say now?" },
+  { ru: "Как ты понимаешь, что человеку можно доверять?", en: "How do you know when a person can be trusted?" },
+  { ru: "Что тебя злит в людях больше всего — и не отражение ли это чего-то в тебе самом?", en: "What angers you most in others — and could it be a reflection of something in you?" },
+  { ru: "Кого из своего окружения ты бы назвал своим зеркалом — и почему именно его?", en: "Who in your life would you call your mirror — and why them?" },
 
-  // Страхи и тревоги
-  "Чего ты больше всего боишься в будущем — и откуда этот страх?",
-  "Какой страх ты унаследовал от родителей, даже не замечая этого?",
-  "Что пугает тебя больше — провал на глазах у всех или незаметная неудача?",
-  "Если бы страх не имел над тобой власти, что бы ты сделал уже сегодня?",
-  "Есть ли мысль, которая возвращается к тебе в самые тихие моменты дня?",
-  "Какую неуверенность в себе ты тщательно скрываешь от других?",
-  "Что страшнее — быть непонятым или быть слишком понятым?",
-  "Когда тревога накатывает, что обычно её вызывает на самом деле?",
-  "Какой провал из прошлого до сих пор отзывается в тебе, хотя все уже забыли?",
-  "Боишься ли ты повторить чьи-то ошибки — и чьи именно?",
+  // Страхи и тревоги / Fears & anxieties
+  { ru: "Чего ты больше всего боишься в будущем — и откуда этот страх?", en: "What do you fear most about the future — and where does that fear come from?" },
+  { ru: "Какой страх ты унаследовал от родителей, даже не замечая этого?", en: "What fear did you inherit from your parents without even noticing?" },
+  { ru: "Что пугает тебя больше — провал на глазах у всех или незаметная неудача?", en: "What scares you more — failing in front of everyone, or failing unnoticed?" },
+  { ru: "Если бы страх не имел над тобой власти, что бы ты сделал уже сегодня?", en: "If fear had no power over you, what would you do today?" },
+  { ru: "Есть ли мысль, которая возвращается к тебе в самые тихие моменты дня?", en: "Is there a thought that returns to you in the quietest moments of the day?" },
+  { ru: "Какую неуверенность в себе ты тщательно скрываешь от других?", en: "What insecurity do you carefully hide from everyone?" },
+  { ru: "Что страшнее — быть непонятым или быть слишком понятым?", en: "Which is scarier — being misunderstood, or being understood too well?" },
+  { ru: "Когда тревога накатывает, что обычно её вызывает на самом деле?", en: "When anxiety rises, what's usually really behind it?" },
+  { ru: "Какой провал из прошлого до сих пор отзывается в тебе, хотя все уже забыли?", en: "What past failure still echoes in you, though everyone else has forgotten?" },
+  { ru: "Боишься ли ты повторить чьи-то ошибки — и чьи именно?", en: "Are you afraid of repeating someone's mistakes — and whose?" },
 
-  // Идентичность и самоощущение
-  "Какая твоя черта характера одновременно и помогает, и мешает тебе?",
-  "Если бы тебя описали одним словом те, кто плохо тебя знает — каким бы оно было? А те, кто знает хорошо?",
-  "В какой роли ты чувствуешь себя наиболее настоящим — на работе, с друзьями, в одиночестве?",
-  "Что ты делаешь не потому что хочешь, а потому что так принято?",
-  "Какую часть себя ты выработал сам, а какую получил по наследству от семьи?",
-  "Если бы можно было оставить только одну свою черту — какую бы ты выбрал?",
-  "Чувствуешь ли ты, что изменился за последний год, или остался прежним внутри?",
-  "Какую маску ты носишь чаще всего, даже сам не замечая этого?",
-  "Что в тебе осталось неизменным со школьных лет?",
-  "Кем ты притворяешься быть, и как давно это длится?",
+  // Идентичность и самоощущение / Identity & self
+  { ru: "Какая твоя черта характера одновременно и помогает, и мешает тебе?", en: "Which trait of yours both helps you and holds you back at the same time?" },
+  { ru: "Если бы тебя описали одним словом те, кто плохо тебя знает — каким бы оно было? А те, кто знает хорошо?", en: "In one word, how would those who barely know you describe you? And those who know you well?" },
+  { ru: "В какой роли ты чувствуешь себя наиболее настоящим — на работе, с друзьями, в одиночестве?", en: "In which role do you feel most authentic — at work, with friends, or alone?" },
+  { ru: "Что ты делаешь не потому что хочешь, а потому что так принято?", en: "What do you do not because you want to, but because it's expected?" },
+  { ru: "Какую часть себя ты выработал сам, а какую получил по наследству от семьи?", en: "Which parts of yourself did you build, and which did you inherit from your family?" },
+  { ru: "Если бы можно было оставить только одну свою черту — какую бы ты выбрал?", en: "If you could keep only one of your traits, which would you choose?" },
+  { ru: "Чувствуешь ли ты, что изменился за последний год, или остался прежним внутри?", en: "Do you feel you've changed over the past year, or stayed the same inside?" },
+  { ru: "Какую маску ты носишь чаще всего, даже сам не замечая этого?", en: "What mask do you wear most often without even realizing it?" },
+  { ru: "Что в тебе осталось неизменным со школьных лет?", en: "What about you hasn't changed since your school years?" },
+  { ru: "Кем ты притворяешься быть, и как давно это длится?", en: "Who are you pretending to be, and how long has it been going on?" },
 
-  // Ценности и смысл
-  "За что ты готов бороться, даже если придётся остаться в одиночестве?",
-  "Что для тебя означает прожить хорошую жизнь — в одном предложении?",
-  "Какую несправедливость ты не можешь видеть спокойно?",
-  "Если бы у тебя осталось всего пять лет — что бы ты делал по-другому?",
-  "Что для тебя важнее — быть правым или быть понятым?",
-  "Какую цену ты готов платить за свободу, а какую — нет?",
-  "Что тебя злит в этом мире больше, чем в людях вокруг?",
-  "Если бы тебе нужно было передать одну ценность своему ребёнку — какую бы ты выбрал?",
-  "Что ты считаешь успехом — признание других или собственное спокойствие?",
-  "Какой принцип ты никогда не предашь, даже если это будет дорого стоить?",
+  // Ценности и смысл / Values & meaning
+  { ru: "За что ты готов бороться, даже если придётся остаться в одиночестве?", en: "What would you fight for, even if it meant standing alone?" },
+  { ru: "Что для тебя означает прожить хорошую жизнь — в одном предложении?", en: "What does living a good life mean to you — in a single sentence?" },
+  { ru: "Какую несправедливость ты не можешь видеть спокойно?", en: "What kind of injustice can you not watch calmly?" },
+  { ru: "Если бы у тебя осталось всего пять лет — что бы ты делал по-другому?", en: "If you had only five years left, what would you do differently?" },
+  { ru: "Что для тебя важнее — быть правым или быть понятым?", en: "What matters more to you — being right, or being understood?" },
+  { ru: "Какую цену ты готов платить за свободу, а какую — нет?", en: "What price are you willing to pay for freedom — and what price isn't worth it?" },
+  { ru: "Что тебя злит в этом мире больше, чем в людях вокруг?", en: "What angers you about the world more than about the people in it?" },
+  { ru: "Если бы тебе нужно было передать одну ценность своему ребёнку — какую бы ты выбрал?", en: "If you could pass one value to your child, which would you choose?" },
+  { ru: "Что ты считаешь успехом — признание других или собственное спокойствие?", en: "What do you count as success — others' recognition, or your own peace?" },
+  { ru: "Какой принцип ты никогда не предашь, даже если это будет дорого стоить?", en: "What principle would you never betray, even at great cost?" },
 
-  // Будущее и перемены
-  "Каким человеком ты хочешь стать через пять лет — и что мешает тебе быть таким уже сейчас?",
-  "Если бы ты мог гарантированно изменить одну вещь в своей жизни — что бы это было?",
-  "Что в твоей жизни требует перемен, но ты откладываешь это снова и снова?",
-  "Какую привычку ты хочешь оставить в прошлом, но она всё ещё держит тебя?",
-  "Представь себя через десять лет — он бы тобой гордился или разочаровался?",
-  "Что бы ты начал делать сегодня, если бы перестал бояться чужого мнения?",
-  "Какая перемена в твоей жизни давно назрела, но ты её избегаешь?",
-  "Если бы завтра всё начать с нуля, что бы ты оставил, а что изменил?",
-  "Чего ты ждёшь от будущего больше — стабильности или новых перемен?",
-  "Что тебе нужно отпустить, чтобы двигаться дальше?",
+  // Будущее и перемены / Future & change
+  { ru: "Каким человеком ты хочешь стать через пять лет — и что мешает тебе быть таким уже сейчас?", en: "Who do you want to become in five years — and what stops you from being that now?" },
+  { ru: "Если бы ты мог гарантированно изменить одну вещь в своей жизни — что бы это было?", en: "If you could change one thing in your life with a guarantee, what would it be?" },
+  { ru: "Что в твоей жизни требует перемен, но ты откладываешь это снова и снова?", en: "What in your life needs to change, but you keep putting it off?" },
+  { ru: "Какую привычку ты хочешь оставить в прошлом, но она всё ещё держит тебя?", en: "What habit do you want to leave behind, but it still holds you?" },
+  { ru: "Представь себя через десять лет — он бы тобой гордился или разочаровался?", en: "Picture yourself ten years from now — would they be proud of you, or disappointed?" },
+  { ru: "Что бы ты начал делать сегодня, если бы перестал бояться чужого мнения?", en: "What would you start doing today if you stopped fearing others' opinions?" },
+  { ru: "Какая перемена в твоей жизни давно назрела, но ты её избегаешь?", en: "What change is long overdue in your life, but you keep avoiding it?" },
+  { ru: "Если бы завтра всё начать с нуля, что бы ты оставил, а что изменил?", en: "If you started everything from scratch tomorrow, what would you keep and what would you change?" },
+  { ru: "Чего ты ждёшь от будущего больше — стабильности или новых перемен?", en: "What do you want more from the future — stability, or new change?" },
+  { ru: "Что тебе нужно отпустить, чтобы двигаться дальше?", en: "What do you need to let go of in order to move forward?" },
 
-  // Творчество и самовыражение
-  "Если бы ты мог заниматься чем угодно без страха неудачи — что бы это было?",
-  "Что ты создаёшь или хочешь создать, но всё время откладываешь?",
-  "Какое творческое занятие приносит тебе ощущение потока?",
-  "Боишься ли ты показывать своё творчество другим — и почему?",
-  "Что мешает тебе закончить начатое — лень, перфекционизм или страх результата?",
-  "Если бы тебе не нужно было зарабатывать деньги, чем бы ты занимался каждый день?",
-  "Что в тебе хочет быть выраженным, но пока остаётся внутри?",
+  // Творчество и самовыражение / Creativity & expression
+  { ru: "Если бы ты мог заниматься чем угодно без страха неудачи — что бы это было?", en: "If you could do anything without fear of failure, what would it be?" },
+  { ru: "Что ты создаёшь или хочешь создать, но всё время откладываешь?", en: "What are you creating, or longing to create, but keep postponing?" },
+  { ru: "Какое творческое занятие приносит тебе ощущение потока?", en: "What creative activity brings you into a state of flow?" },
+  { ru: "Боишься ли ты показывать своё творчество другим — и почему?", en: "Are you afraid to show your creative work to others — and why?" },
+  { ru: "Что мешает тебе закончить начатое — лень, перфекционизм или страх результата?", en: "What stops you from finishing what you start — laziness, perfectionism, or fear of the result?" },
+  { ru: "Если бы тебе не нужно было зарабатывать деньги, чем бы ты занимался каждый день?", en: "If you never had to earn money, what would you do every day?" },
+  { ru: "Что в тебе хочет быть выраженным, но пока остаётся внутри?", en: "What in you wants to be expressed but still stays inside?" },
 
-  // Тело и energy
-  "Как ты понимаешь, что устал — раньше, чем тело начинает кричать об этом?",
-  "Что твоё тело знает о тебе такого, чего разум ещё не признал?",
-  "Когда ты в последний раз чувствовал избыток энергии — и что этому способствовало?",
-  "Какая часть твоей жизни истощает тебя больше всего, даже если ты это терпишь?",
-  "Что восстанавливает тебя по-настоящему, а не просто отвлекает на время?",
+  // Тело и энергия / Body & energy
+  { ru: "Как ты понимаешь, что устал — раньше, чем тело начинает кричать об этом?", en: "How do you know you're tired — before your body starts screaming it?" },
+  { ru: "Что твоё тело знает о тебе такого, чего разум ещё не признал?", en: "What does your body know about you that your mind hasn't admitted yet?" },
+  { ru: "Когда ты в последний раз чувствовал избыток энергии — и что этому способствовало?", en: "When did you last feel overflowing with energy — and what made it happen?" },
+  { ru: "Какая часть твоей жизни истощает тебя больше всего, даже если ты это терпишь?", en: "Which part of your life drains you most, even if you endure it?" },
+  { ru: "Что восстанавливает тебя по-настоящему, а не просто отвлекает на время?", en: "What truly restores you, rather than just distracting you for a while?" },
 
-  // Прощение и принятие
-  "Есть ли человек, которого ты до сих пор не простил? Что тебе мешает это сделать?",
-  "Простил ли ты себя за самую большую ошибку в своей жизни?",
-  "Что тебе сложнее — просить прощения или принимать чужие извинения?",
-  "Какую часть себя ты до сих пор не принял до конца?",
-  "Есть ли что-то в прошлом, что продолжает влиять на твои решения сегодня, хотя ты этого не замечаешь?",
+  // Прощение и принятие / Forgiveness & acceptance
+  { ru: "Есть ли человек, которого ты до сих пор не простил? Что тебе мешает это сделать?", en: "Is there someone you still haven't forgiven? What's holding you back?" },
+  { ru: "Простил ли ты себя за самую большую ошибку в своей жизни?", en: "Have you forgiven yourself for the biggest mistake of your life?" },
+  { ru: "Что тебе сложнее — просить прощения или принимать чужие извинения?", en: "What's harder for you — asking forgiveness, or accepting someone's apology?" },
+  { ru: "Какую часть себя ты до сих пор не принял до конца?", en: "What part of yourself have you still not fully accepted?" },
+  { ru: "Есть ли что-то в прошлом, что продолжает влиять на твои решения сегодня, хотя ты этого не замечаешь?", en: "Is there something in your past still shaping your decisions today, without you noticing?" },
 
-  // Одиночество и тишина
-  "Что ты чувствуешь, когда остаёшься совсем один — облегчение или тревогу?",
-  "Какая мысль приходит к тебе только в полной тишине, без отвлечений?",
-  "Умеешь ли ты быть один без того, чтобы заполнять время чем-то внешним?",
-  "Что самое честное ты говорил себе в моменты одиночества?",
-  "Если бы тишина могла говорить, что бы она тебе сказала о тебе самом?"
+  // Одиночество и тишина / Solitude & silence
+  { ru: "Что ты чувствуешь, когда остаёшься совсем один — облегчение или тревогу?", en: "What do you feel when you're completely alone — relief, or unease?" },
+  { ru: "Какая мысль приходит к тебе только в полной тишине, без отвлечений?", en: "What thought comes to you only in complete silence, free of distractions?" },
+  { ru: "Умеешь ли ты быть один без того, чтобы заполнять время чем-то внешним?", en: "Can you be alone without filling the time with something external?" },
+  { ru: "Что самое честное ты говорил себе в моменты одиночества?", en: "What's the most honest thing you've told yourself in moments of solitude?" },
+  { ru: "Если бы тишина могла говорить, что бы она тебе сказала о тебе самом?", en: "If silence could speak, what would it tell you about yourself?" }
 ];
+
 
 const TRAIT_NAMES = ['Самопознание','Эмпатия','Рефлексия','Открытость','Перфекционизм'];
 const TRAIT_COLORS = ['#4ecb8d','#a78bfa','#4ecb8d','#a78bfa','#f87171'];
@@ -627,7 +685,7 @@ function showQuestion(skipPaywallCheck) {
     return;
   }
 
-  document.getElementById('q-text').textContent = QUESTIONS[state.currentQ % QUESTIONS.length];
+  document.getElementById('q-text').textContent = QUESTIONS[state.currentQ % QUESTIONS.length][state.lang || detectLang()];
   document.getElementById('day-chip').textContent = 'День ' + state.day;
   document.getElementById('streak-chip').textContent = '🔥 ' + state.streak + ' ' + pluralDays(state.streak);
   document.getElementById('answer-input').value = '';
@@ -683,8 +741,10 @@ async function getInsight(question, answer) {
           model: 'deepseek-v4-flash',
           max_tokens: 600,
           messages: [
-            { role: 'system', content: 'Ты психолог-аналитик приложения Зеркало. Отвечай ТОЛЬКО валидным JSON без markdown и backticks:\n{"insight":"2-3 предложения напрямую к человеку (ты/твой). Точно, неожиданно, с теплотой.","traits":["черта1","черта2","черта3"]}' },
-            { role: 'user', content: 'Вопрос: "' + question + '"\nОтвет: "' + answer + '"' }
+            { role: 'system', content: (state.lang || detectLang()) === 'en'
+              ? 'You are the analyst-psychologist of the Mirror app. Reply ONLY with valid JSON, no markdown or backticks:\n{"insight":"2-3 sentences spoken directly to the person (you/your). Precise, surprising, warm.","traits":["trait1","trait2","trait3"]}'
+              : 'Ты психолог-аналитик приложения Зеркало. Отвечай ТОЛЬКО валидным JSON без markdown и backticks:\n{"insight":"2-3 предложения напрямую к человеку (ты/твой). Точно, неожиданно, с теплотой.","traits":["черта1","черта2","черта3"]}' },
+            { role: 'user', content: ((state.lang || detectLang()) === 'en' ? 'Question: "' : 'Вопрос: "') + question + ((state.lang || detectLang()) === 'en' ? '"\nAnswer: "' : '"\nОтвет: "') + answer + '"' }
           ]
         })
       });
@@ -725,7 +785,7 @@ let isRequestInFlight = false;
 async function submitAnswer() {
   if (isRequestInFlight) return;
   const answer = document.getElementById('answer-input').value.trim();
-  const question = QUESTIONS[state.currentQ % QUESTIONS.length];
+  const question = QUESTIONS[state.currentQ % QUESTIONS.length][state.lang || detectLang()];
   pendingAnswer = { question: question, answer: answer };
 
   document.getElementById('echo-answer').textContent = answer;
@@ -982,6 +1042,7 @@ async function pay() {
 }
 
 loadState(function() {
+  if (!state.lang) { state.lang = detectLang(); save(); }
   ensureUserInDb();
   syncPaidStatus().then(function() {
     if (state.history && state.history.length > 0) {
